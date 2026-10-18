@@ -3,6 +3,10 @@ import { PipCharacter } from '../character/PipCharacter';
 import { ArrowUp, Heart, Moon } from 'lucide-react';
 import { soundEngine } from '../../utils/soundEffects';
 import { DeveloperBottomBar } from './DeveloperBottomBar';
+import {
+  getAndIncrementVisitorCount,
+  VisitorCounterResult,
+} from '../../services/visitorCounterService';
 
 interface FooterProps {
   theme: 'day' | 'night';
@@ -10,28 +14,35 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ theme, enableTilt }) => {
-  const [visitorCount, setVisitorCount] = useState<number>(42);
-  const [isShared] = useState<boolean>(false);
+  const [counterData, setCounterData] = useState<VisitorCounterResult>({
+    count: 1,
+    isShared: false,
+    status: 'local',
+    statusMessage: 'Loading session counter...',
+    metric: 'session',
+  });
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const stored = localStorage.getItem('pip_local_dream_counter');
-      const currentCount = stored ? parseInt(stored, 10) : 42;
+    let isMounted = true;
 
-      // Increment once per browser session to prevent double-counting on refresh
-      const sessionCounted = sessionStorage.getItem('pip_counted_this_session');
-      if (!sessionCounted) {
-        const nextCount = currentCount + 1;
-        localStorage.setItem('pip_local_dream_counter', nextCount.toString());
-        sessionStorage.setItem('pip_counted_this_session', 'true');
-        setVisitorCount(nextCount);
-      } else {
-        setVisitorCount(currentCount);
-      }
-    } catch {
-      setVisitorCount(42);
-    }
+    getAndIncrementVisitorCount()
+      .then((res) => {
+        if (isMounted) {
+          setCounterData(res);
+          setIsLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.warn('Visitor counter initialization error:', err);
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const scrollToTop = () => {
@@ -39,7 +50,7 @@ export const Footer: React.FC<FooterProps> = ({ theme, enableTilt }) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const formattedCount = visitorCount.toString().padStart(6, '0');
+  const formattedCount = counterData.count.toString().padStart(6, '0');
 
   return (
     <footer
@@ -48,9 +59,9 @@ export const Footer: React.FC<FooterProps> = ({ theme, enableTilt }) => {
       style={{ backgroundColor: 'var(--color-surface)' }}
     >
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
-        {/* Main Clean Row: Sleepy Pip & Controls (Compact, tightened height) */}
+        {/* Main Clean Row: Sleepy Pip & Controls (Snug height) */}
         <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-5 pb-4 sm:pb-5">
-          {/* Sleepy Pip & Farewell Message (18% larger avatar with snug Z/ZZ indicators) */}
+          {/* Sleepy Pip & Farewell Message (Preserved sleeping Pip artwork) */}
           <div className="flex items-center gap-4 text-center md:text-left">
             <div className="w-[76px] h-[76px] sm:w-[92px] sm:h-[92px] shrink-0 relative flex items-center justify-center">
               <PipCharacter
@@ -96,25 +107,41 @@ export const Footer: React.FC<FooterProps> = ({ theme, enableTilt }) => {
               <ArrowUp className="w-3.5 h-3.5 text-pink-400" />
             </button>
 
-            {/* Refined Minimalist Visitor Counter */}
-            <div className="flex flex-col items-center md:items-end gap-0.5">
+            {/* Refined Minimalist Visitor Counter (Honest, atomic & duplicate-protected) */}
+            <div className="flex flex-col items-center md:items-end gap-0.5" title={counterData.statusMessage}>
               <div className="px-2.5 py-1 rounded-full flex items-center gap-1.5 text-[11px] font-mono border border-slate-700/40 bg-slate-950/60 shadow-xs">
                 <span className="text-[10px] text-pink-400 font-semibold tracking-wider">
                   VISITOR:
                 </span>
-                <div className="flex items-center gap-0.5" aria-label={`Visitor count: ${visitorCount}`}>
-                  {formattedCount.split('').map((digit, idx) => (
-                    <span
-                      key={idx}
-                      className="inline-flex items-center justify-center w-3.5 h-4.5 rounded bg-black/60 border border-amber-400/30 text-amber-300 font-mono text-[10px] font-bold leading-none"
-                    >
-                      {digit}
+                <div
+                  className="flex items-center gap-0.5"
+                  aria-label={`Visitor count: ${counterData.count}`}
+                >
+                  {isLoading ? (
+                    <span className="text-[10px] text-amber-300 font-mono animate-pulse px-1">
+                      SYNCING...
                     </span>
-                  ))}
+                  ) : (
+                    formattedCount.split('').map((digit, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center justify-center w-3.5 h-4.5 rounded bg-black/60 border border-amber-400/30 text-amber-300 font-mono text-[10px] font-bold leading-none"
+                      >
+                        {digit}
+                      </span>
+                    ))
+                  )}
                 </div>
               </div>
-              <span className="text-[9px] font-mono text-slate-500 tracking-tight">
-                {isShared ? 'Shared Live Counter' : 'Local Session'}
+              <span className="text-[9px] font-mono text-slate-500 tracking-tight flex items-center gap-1">
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    counterData.isShared ? 'bg-emerald-400' : 'bg-amber-400/80'
+                  }`}
+                />
+                <span>
+                  {counterData.isShared ? 'Shared Live Counter' : 'Local Session'}
+                </span>
               </span>
             </div>
           </div>

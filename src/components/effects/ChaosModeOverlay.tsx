@@ -130,9 +130,9 @@ export const ChaosModeOverlay: React.FC<ChaosModeOverlayProps> = ({ active, onDi
         </div>
       </div>
 
-      {/* 2. RESTRAINED RETRO FLOATING MARGIN SPRITES (POINTER-EVENTS-NONE) */}
+      {/* 2. RESTRAINED RETRO FLOATING MARGIN SPRITES (DESKTOP / TABLET ONLY, POINTER-EVENTS-NONE) */}
       <div
-        className="fixed inset-0 pointer-events-none z-30 overflow-hidden select-none"
+        className="fixed inset-0 pointer-events-none z-30 overflow-hidden select-none hidden sm:block"
         aria-hidden="true"
       >
         {motes.map((mote) => (

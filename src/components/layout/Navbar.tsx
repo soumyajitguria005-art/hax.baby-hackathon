@@ -11,6 +11,7 @@ interface NavbarProps {
   onSecretStarUnlock: () => void;
   chaosMode?: boolean;
   onToggleChaosMode?: () => void;
+  onReplayIntro?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -21,6 +22,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSecretStarUnlock,
   chaosMode = false,
   onToggleChaosMode,
+  onReplayIntro,
 }) => {
   const [starClickCount, setStarClickCount] = useState(0);
   const [showSecretToast, setShowSecretToast] = useState(false);
@@ -73,8 +75,16 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="liquid-glass rounded-full px-5 py-3 flex items-center justify-between gap-4 shadow-lg transition-all duration-300">
           {/* Zone 1: Wordmark & Brand Star */}
           <a
-            href="#"
-            className="flex items-center gap-2.5 text-base sm:text-lg font-bold tracking-tight font-serif whitespace-nowrap shrink-0 group focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 rounded-full"
+            href="#hero"
+            onClick={(e) => {
+              if (onReplayIntro) {
+                e.preventDefault();
+                soundEngine.playLanternClick();
+                onReplayIntro();
+              }
+            }}
+            title="Pip's Dream OS — Click to replay opening scene"
+            className="flex items-center gap-2.5 text-base sm:text-lg font-bold tracking-tight font-serif whitespace-nowrap shrink-0 group focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 rounded-full cursor-pointer"
             style={{ color: 'var(--color-text-heading)' }}
           >
             <span className="w-6 h-6 rounded-full bg-gradient-to-tr from-pink-500 to-amber-300 flex items-center justify-center text-xs shadow-sm shadow-pink-500/40 group-hover:rotate-12 transition-transform">

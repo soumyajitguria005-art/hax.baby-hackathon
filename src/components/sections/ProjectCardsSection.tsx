@@ -5,11 +5,106 @@ import { use3DCardTilt } from '../../hooks/use3DCardTilt';
 import { ThreeMusicBox } from '../three/ThreeMusicBox';
 import { ThreeLantern } from '../three/ThreeLantern';
 import { ThreeRooftops } from '../three/ThreeRooftops';
-import { Play, Pause, RotateCw, Lightbulb, Send, RotateCcw, Sparkles, Box } from 'lucide-react';
+import {
+  Play,
+  Pause,
+  RotateCw,
+  Lightbulb,
+  Send,
+  RotateCcw,
+  Sparkles,
+  Box,
+  X,
+  Layers,
+  Cpu,
+  CheckCircle,
+  ExternalLink,
+} from 'lucide-react';
 import { useIntersectionObserver } from '../../hooks/useIntersectionObserver';
 import { HeadingReveal } from '../effects/HeadingReveal';
 import { DreamPath } from '../effects/DreamPath';
 import { TextAnimation } from '../text';
+
+export interface ProjectDetailData {
+  id: string;
+  title: string;
+  category: string;
+  categoryColor: string;
+  tagline: string;
+  description: string;
+  extendedOverview: string;
+  features: string[];
+  techStack: string[];
+  authors: string[];
+  actionLabel?: string;
+  interactiveType: 'flight' | 'melody' | 'lantern';
+}
+
+const PROJECTS_DATA: ProjectDetailData[] = [
+  {
+    id: 'cloudcastle',
+    title: 'Cloudcastle Dreamscape',
+    category: 'Dreamscapes',
+    categoryColor: 'text-sky-400',
+    tagline: 'A floating castle above cotton-candy clouds, where every doorway opens into a different dream.',
+    description:
+      'A whimsical floating citadel suspended above soft evening clouds, complete with starlight bridges, drifting cloudbanks, and aerial waypoint routes.',
+    extendedOverview:
+      'Engineered as an interactive 3D WebGL diorama with real-time flight simulations. Visitors can chart dream delivery routes, track celestial waypoints across starry skies, and switch dynamically between an orbital Three.js environment and a 2D vector path.',
+    features: [
+      'Interactive 3D WebGL scene powered by Three.js with soft ambient lighting',
+      'Procedural celestial trajectory tracker with live waypoint progress',
+      'Dual rendering modes: seamless toggle between 3D spatial orbit and 2D vector map',
+      'Responsive mouse and touch tilt with dynamic liquid glass specular reflections',
+    ],
+    techStack: ['Three.js', 'WebGL', 'React 19', 'Tailwind CSS v4', 'Motion'],
+    authors: ['Soumyajit Guria (Lead Architect & 3D)', 'Shubhankar Das (Animation)'],
+    actionLabel: 'Launch Flight Path',
+    interactiveType: 'flight',
+  },
+  {
+    id: 'moonbeam-lullabies',
+    title: 'Moonbeam Lullabies',
+    category: 'Sound & Sleep',
+    categoryColor: 'text-pink-400',
+    tagline: 'A collection of gentle nighttime melodies inspired by starlight, sleepy clouds, and the quiet glow of the moon.',
+    description:
+      'A peaceful collection of bedtime melodies designed to make the dreamworld feel warm, calm, and magical. Built with a custom Web Audio celesta synthesizer.',
+    extendedOverview:
+      'Utilizes mathematical harmonic frequencies tuned to pentatonic calm (432Hz root scale). Features an interactive 3D music box with revolving golden starlight gears, floating musical notes, and an eight-band real-time visualizer.',
+    features: [
+      'Custom Web Audio API polyphonic celesta synthesizer with gentle envelope release',
+      'Interactive 3D Music Box model with rotating gears and ambient night illumination',
+      'Pentatonic step sequencer with real-time waveform visualization bars',
+      'Non-disruptive audio architecture with global mute synchronization',
+    ],
+    techStack: ['Web Audio API', 'Three.js', 'React 19', 'Lucide Icons'],
+    authors: ['Shubhankar Das (Soundscapes)', 'Shubham Si (Frontend & Interactions)'],
+    actionLabel: 'Play Celesta Melodies',
+    interactiveType: 'melody',
+  },
+  {
+    id: 'lantern-tales',
+    title: 'The Little Lantern Tales',
+    category: 'Bedtime Stories',
+    categoryColor: 'text-amber-400',
+    tagline: 'Tiny bedtime adventures following a golden lantern through enchanted gardens, sleepy forests, and hidden dream paths.',
+    description:
+      'Short bedtime adventures set in Pip’s whimsical dreamworld, following a glowing lantern that illuminates secret pathways and sleepy critters.',
+    extendedOverview:
+      'Features a high-fidelity 3D brass lantern rendered with physical materials (PBR), dynamic point lighting, glass refraction shaders, and customizable color temperature spectrums from warm amber to cool moonlight.',
+    features: [
+      'Real-time Three.js PointLight and MeshPhysicalMaterial simulation',
+      'Four ambient story color presets (Amber, Moonlight, Rose, Mint)',
+      'Interactive luminance radius controls adjusting real-time specular glow',
+      'Rich illustrated bedtime narrative cards with smooth flip interactions',
+    ],
+    techStack: ['Three.js PointLight', 'PBR Shaders', 'React 19', 'HTML5 Controls'],
+    authors: ['Shubham Si (Interactions)', 'Soumyajit Guria (Creative Direction)'],
+    actionLabel: 'Toggle Lantern Power',
+    interactiveType: 'lantern',
+  },
+];
 
 interface ProjectCardsSectionProps {
   onPipStateChange: (state: PipState) => void;
@@ -21,6 +116,10 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
   onPipStateChange,
   isRevealed: propIsRevealed,
 }) => {
+  // Modal State for Project Details mini-window
+  const [activeModalProject, setActiveModalProject] = useState<ProjectDetailData | null>(null);
+  const modalCloseBtnRef = useRef<HTMLButtonElement>(null);
+
   // Intersection observers with staggered entrance delays
   const sectionObserver = useIntersectionObserver<HTMLElement>({ threshold: 0.1, triggerOnce: true });
   const isSectionRevealed = propIsRevealed !== undefined ? propIsRevealed : sectionObserver.isRevealed;
@@ -58,11 +157,28 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
   const [selectedLanternColor, setSelectedLanternColor] = useState('#f59e0b');
   const [glowIntensity, setGlowIntensity] = useState(85);
 
-  // Stable ref for parent callback to avoid effect re-triggers and cross-component render conflicts
+  // Stable ref for parent callback to avoid effect re-triggers
   const onPipStateChangeRef = useRef(onPipStateChange);
   useEffect(() => {
     onPipStateChangeRef.current = onPipStateChange;
   }, [onPipStateChange]);
+
+  // Modal keyboard listener (Escape to close) & auto-focus
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && activeModalProject) {
+        soundEngine.playButtonTick();
+        setActiveModalProject(null);
+      }
+    };
+
+    if (activeModalProject) {
+      window.addEventListener('keydown', handleKeyDown);
+      modalCloseBtnRef.current?.focus();
+    }
+
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeModalProject]);
 
   // Cloudcastle flight animation loop
   useEffect(() => {
@@ -105,23 +221,23 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
     };
   }, [isPlayingLullaby]);
 
-  const startDelivery = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const startDelivery = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     soundEngine.playDreamWhoosh();
     setFlightProgress(0);
     setIsDelivering(true);
     onPipStateChangeRef.current?.('flying');
   };
 
-  const resetDelivery = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const resetDelivery = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setFlightProgress(0);
     setIsDelivering(false);
     onPipStateChangeRef.current?.('idle');
   };
 
-  const togglePlayLullaby = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const togglePlayLullaby = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     const nextPlaying = !isPlayingLullaby;
     setIsPlayingLullaby(nextPlaying);
     if (nextPlaying) {
@@ -132,12 +248,23 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
     }
   };
 
-  const toggleLanternPower = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const toggleLanternPower = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     soundEngine.playLanternClick();
     const nextLit = !isLanternLit;
     setIsLanternLit(nextLit);
     onPipStateChangeRef.current?.(nextLit ? 'excited' : 'idle');
+  };
+
+  const openProjectModal = (proj: ProjectDetailData, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    soundEngine.playLanternClick();
+    setActiveModalProject(proj);
+  };
+
+  const closeProjectModal = () => {
+    soundEngine.playButtonTick();
+    setActiveModalProject(null);
   };
 
   return (
@@ -167,7 +294,7 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
             </TextAnimation>
           </HeadingReveal>
           <p className="text-sm sm:text-base leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>
-            Step inside Pip's Dream Studio to explore three signature creations. Hover for 3D liquid tilt, inspect the interactive models, or click any card to flip and explore!
+            Step inside Pip's Dream Studio to explore three signature creations. Hover for 3D liquid tilt, click anywhere on a card to open detailed specs, or flip to inspect the concept!
           </p>
         </div>
 
@@ -188,20 +315,16 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
               onPointerMove={card1Tilt.onPointerMove}
               onPointerLeave={card1Tilt.onPointerLeave}
               className="perspective-1000 h-[510px] cursor-pointer group relative"
-              onClick={() => {
-                soundEngine.playLanternClick();
-                setIsFlipped1(!isFlipped1);
-              }}
+              onClick={() => openProjectModal(PROJECTS_DATA[0])}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
+                if (e.key === 'Enter') {
                   e.preventDefault();
-                  soundEngine.playLanternClick();
-                  setIsFlipped1(!isFlipped1);
+                  openProjectModal(PROJECTS_DATA[0]);
                 }
               }}
               tabIndex={0}
               role="button"
-              aria-label="Cloudcastle Dreamscape Project Card. Press Enter to flip."
+              aria-label="Cloudcastle Dreamscape. Click to open project details window."
             >
               {/* Dynamic Liquid Glare Layer */}
               <div className="absolute inset-0 rounded-3xl z-20 pointer-events-none" style={card1Tilt.glareStyle} />
@@ -218,19 +341,29 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
                       <span className="font-semibold text-sky-400 font-rounded">Dreamscapes</span>
                       <div className="flex items-center gap-2">
                         <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             setIs3DMode1(!is3DMode1);
                           }}
-                          className="liquid-glass-pill px-2 py-0.5 text-[10px] font-mono text-sky-300 hover:text-white flex items-center gap-1"
+                          className="liquid-glass-pill px-2 py-0.5 text-[10px] font-mono text-sky-300 hover:text-white flex items-center gap-1 cursor-pointer"
                           title="Toggle 3D WebGL / 2D Vector"
                         >
                           <Box className="w-3 h-3" />
                           <span>{is3DMode1 ? '3D Active' : '2D View'}</span>
                         </button>
-                        <span className="flex items-center gap-1 text-[11px] text-slate-400 group-hover:text-sky-300 transition-colors">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            soundEngine.playLanternClick();
+                            setIsFlipped1(true);
+                          }}
+                          className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-sky-300 transition-colors cursor-pointer"
+                          title="Flip card for concept view"
+                        >
                           <RotateCw className="w-3 h-3" /> Flip 3D
-                        </span>
+                        </button>
                       </div>
                     </div>
 
@@ -261,7 +394,7 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
                     <HeadingReveal
                       as="h3"
                       delay={150}
-                      className="text-2xl font-bold font-serif mb-1"
+                      className="text-2xl font-bold font-serif mb-1 group-hover:text-sky-300 transition-colors"
                       style={{ color: 'var(--color-text-heading)' }}
                     >
                       Cloudcastle Dreamscape
@@ -271,16 +404,24 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
                     </p>
                   </div>
 
-                  {/* Bottom Interactive Trigger */}
+                  {/* Bottom Interactive Trigger & Details Button */}
                   <div className="pt-3 border-t border-slate-700/30 flex items-center justify-between">
                     <button
+                      type="button"
                       onClick={startDelivery}
                       className="liquid-glass-button px-4 py-2 rounded-full text-xs font-bold text-white bg-sky-600/75 hover:bg-sky-600 flex items-center gap-2 cursor-pointer shadow-md"
                     >
                       <Send className="w-3.5 h-3.5" />
                       <span>{isDelivering ? 'Exploring Clouds...' : 'Explore Pathways'}</span>
                     </button>
-                    <span className="text-[11px] text-sky-300 font-semibold font-rounded">Tap to Flip ↻</span>
+                    <button
+                      type="button"
+                      onClick={(e) => openProjectModal(PROJECTS_DATA[0], e)}
+                      className="text-[11px] text-sky-300 hover:text-white font-semibold font-rounded flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Details</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </button>
                   </div>
                 </div>
 
@@ -290,8 +431,10 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
                     <div className="flex items-center justify-between text-xs mb-3">
                       <span className="font-bold text-sky-400 font-serif text-sm">Cloudcastle Concept</span>
                       <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
+                          soundEngine.playLanternClick();
                           setIsFlipped1(false);
                         }}
                         className="liquid-glass-pill px-2.5 py-1 text-[11px] text-slate-300 hover:text-white flex items-center gap-1 cursor-pointer"
@@ -305,7 +448,7 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
                     </p>
 
                     {/* Pathway Trajectory Tracker */}
-                    <div className="liquid-glass rounded-2xl p-4 space-y-3 mb-3">
+                    <div className="liquid-glass rounded-2xl p-4 space-y-3 mb-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-between text-xs text-slate-300">
                         <span>Dreamway Trajectory</span>
                         <span className="font-mono text-sky-400">{flightProgress}% Charted</span>
@@ -320,6 +463,7 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
 
                       <div className="flex items-center justify-between pt-1">
                         <button
+                          type="button"
                           onClick={startDelivery}
                           disabled={isDelivering}
                           className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white flex items-center gap-1.5 cursor-pointer shadow-md"
@@ -329,6 +473,7 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
                         </button>
 
                         <button
+                          type="button"
                           onClick={resetDelivery}
                           className="px-3 py-1.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer"
                         >
@@ -339,8 +484,25 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
                     </div>
                   </div>
 
-                  <div className="text-[11px] text-slate-400 text-center border-t border-slate-700/30 pt-3">
-                    Click card again to flip to front
+                  <div className="text-[11px] text-slate-400 text-center border-t border-slate-700/30 pt-3 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsFlipped1(false);
+                      }}
+                      className="hover:text-white transition-colors cursor-pointer"
+                    >
+                      Flip to front ↻
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => openProjectModal(PROJECTS_DATA[0], e)}
+                      className="text-sky-300 hover:text-white font-semibold cursor-pointer flex items-center gap-1"
+                    >
+                      <span>Full Specs</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -362,20 +524,16 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
               onPointerMove={card2Tilt.onPointerMove}
               onPointerLeave={card2Tilt.onPointerLeave}
               className="perspective-1000 h-[510px] cursor-pointer group relative"
-              onClick={() => {
-                soundEngine.playLanternClick();
-                setIsFlipped2(!isFlipped2);
-              }}
+              onClick={() => openProjectModal(PROJECTS_DATA[1])}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
+                if (e.key === 'Enter') {
                   e.preventDefault();
-                  soundEngine.playLanternClick();
-                  setIsFlipped2(!isFlipped2);
+                  openProjectModal(PROJECTS_DATA[1]);
                 }
               }}
               tabIndex={0}
               role="button"
-              aria-label="Moonbeam Lullabies Project Card. Press Enter to flip."
+              aria-label="Moonbeam Lullabies. Click to open project details window."
             >
               {/* Dynamic Liquid Glare Layer */}
               <div className="absolute inset-0 rounded-3xl z-20 pointer-events-none" style={card2Tilt.glareStyle} />
@@ -392,19 +550,29 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
                       <span className="font-semibold text-pink-400 font-rounded">Sound & Sleep</span>
                       <div className="flex items-center gap-2">
                         <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             setIs3DMode2(!is3DMode2);
                           }}
-                          className="liquid-glass-pill px-2 py-0.5 text-[10px] font-mono text-pink-300 hover:text-white flex items-center gap-1"
+                          className="liquid-glass-pill px-2 py-0.5 text-[10px] font-mono text-pink-300 hover:text-white flex items-center gap-1 cursor-pointer"
                           title="Toggle 3D WebGL / 2D Vector"
                         >
                           <Box className="w-3 h-3" />
                           <span>{is3DMode2 ? '3D Active' : '2D View'}</span>
                         </button>
-                        <span className="flex items-center gap-1 text-[11px] text-slate-400 group-hover:text-pink-300 transition-colors">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            soundEngine.playLanternClick();
+                            setIsFlipped2(true);
+                          }}
+                          className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-pink-300 transition-colors cursor-pointer"
+                          title="Flip card for concept view"
+                        >
                           <RotateCw className="w-3 h-3" /> Flip 3D
-                        </span>
+                        </button>
                       </div>
                     </div>
 
@@ -442,7 +610,7 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
                     <HeadingReveal
                       as="h3"
                       delay={250}
-                      className="text-2xl font-bold font-serif mb-1"
+                      className="text-2xl font-bold font-serif mb-1 group-hover:text-pink-300 transition-colors"
                       style={{ color: 'var(--color-text-heading)' }}
                     >
                       Moonbeam Lullabies
@@ -452,16 +620,24 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
                     </p>
                   </div>
 
-                  {/* Bottom Interactive Trigger */}
+                  {/* Bottom Interactive Trigger & Details Button */}
                   <div className="pt-3 border-t border-slate-700/30 flex items-center justify-between">
                     <button
+                      type="button"
                       onClick={togglePlayLullaby}
                       className="liquid-glass-button px-4 py-2 rounded-full text-xs font-bold text-white bg-pink-600/75 hover:bg-pink-600 flex items-center gap-2 cursor-pointer shadow-md"
                     >
                       {isPlayingLullaby ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
                       <span>{isPlayingLullaby ? 'Pause Melodies' : 'Play Lullaby'}</span>
                     </button>
-                    <span className="text-[11px] text-pink-300 font-semibold font-rounded">Tap to Flip ↻</span>
+                    <button
+                      type="button"
+                      onClick={(e) => openProjectModal(PROJECTS_DATA[1], e)}
+                      className="text-[11px] text-pink-300 hover:text-white font-semibold font-rounded flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Details</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </button>
                   </div>
                 </div>
 
@@ -471,8 +647,10 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
                     <div className="flex items-center justify-between text-xs mb-3">
                       <span className="font-bold text-pink-400 font-serif text-sm">Moonbeam Lullabies Concept</span>
                       <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
+                          soundEngine.playLanternClick();
                           setIsFlipped2(false);
                         }}
                         className="liquid-glass-pill px-2.5 py-1 text-[11px] text-slate-300 hover:text-white flex items-center gap-1 cursor-pointer"
@@ -486,7 +664,7 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
                     </p>
 
                     {/* Working Celesta Sequencer Controller */}
-                    <div className="liquid-glass rounded-2xl p-4 space-y-3 mb-4">
+                    <div className="liquid-glass rounded-2xl p-4 space-y-3 mb-4" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-between text-xs text-pink-200">
                         <span>Melody State</span>
                         <span className="font-mono text-[11px] text-amber-300">
@@ -509,6 +687,7 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
 
                       <div className="flex items-center justify-between pt-1">
                         <button
+                          type="button"
                           onClick={togglePlayLullaby}
                           className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-pink-600 hover:bg-pink-500 text-white flex items-center gap-1.5 cursor-pointer shadow-md"
                         >
@@ -520,8 +699,25 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
                     </div>
                   </div>
 
-                  <div className="text-[11px] text-slate-400 text-center border-t border-slate-700/30 pt-3">
-                    Click card again to flip to front
+                  <div className="text-[11px] text-slate-400 text-center border-t border-slate-700/30 pt-3 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsFlipped2(false);
+                      }}
+                      className="hover:text-white transition-colors cursor-pointer"
+                    >
+                      Flip to front ↻
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => openProjectModal(PROJECTS_DATA[1], e)}
+                      className="text-pink-300 hover:text-white font-semibold cursor-pointer flex items-center gap-1"
+                    >
+                      <span>Full Specs</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -543,20 +739,16 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
               onPointerMove={card3Tilt.onPointerMove}
               onPointerLeave={card3Tilt.onPointerLeave}
               className="perspective-1000 h-[510px] cursor-pointer group relative"
-              onClick={() => {
-                soundEngine.playLanternClick();
-                setIsFlipped3(!isFlipped3);
-              }}
+              onClick={() => openProjectModal(PROJECTS_DATA[2])}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
+                if (e.key === 'Enter') {
                   e.preventDefault();
-                  soundEngine.playLanternClick();
-                  setIsFlipped3(!isFlipped3);
+                  openProjectModal(PROJECTS_DATA[2]);
                 }
               }}
               tabIndex={0}
               role="button"
-              aria-label="The Little Lantern Tales Project Card. Press Enter to flip."
+              aria-label="The Little Lantern Tales. Click to open project details window."
             >
               <div className="absolute inset-0 rounded-3xl z-20 pointer-events-none" style={card3Tilt.glareStyle} />
 
@@ -572,19 +764,29 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
                       <span className="font-semibold text-amber-400 font-rounded">Bedtime Stories</span>
                       <div className="flex items-center gap-2">
                         <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             setIs3DMode3(!is3DMode3);
                           }}
-                          className="liquid-glass-pill px-2 py-0.5 text-[10px] font-mono text-amber-300 hover:text-white flex items-center gap-1"
+                          className="liquid-glass-pill px-2 py-0.5 text-[10px] font-mono text-amber-300 hover:text-white flex items-center gap-1 cursor-pointer"
                           title="Toggle 3D WebGL / 2D Vector"
                         >
                           <Box className="w-3 h-3" />
                           <span>{is3DMode3 ? '3D Active' : '2D View'}</span>
                         </button>
-                        <span className="flex items-center gap-1 text-[11px] text-slate-400 group-hover:text-amber-300 transition-colors">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            soundEngine.playLanternClick();
+                            setIsFlipped3(true);
+                          }}
+                          className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-amber-300 transition-colors cursor-pointer"
+                          title="Flip card for concept view"
+                        >
                           <RotateCw className="w-3 h-3" /> Flip 3D
-                        </span>
+                        </button>
                       </div>
                     </div>
 
@@ -614,7 +816,7 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
                     <HeadingReveal
                       as="h3"
                       delay={350}
-                      className="text-2xl font-bold font-serif mb-1"
+                      className="text-2xl font-bold font-serif mb-1 group-hover:text-amber-300 transition-colors"
                       style={{ color: 'var(--color-text-heading)' }}
                     >
                       The Little Lantern Tales
@@ -624,9 +826,10 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
                     </p>
                   </div>
 
-                  {/* Bottom Interactive Trigger */}
+                  {/* Bottom Interactive Trigger & Details Button */}
                   <div className="pt-3 border-t border-slate-700/30 flex items-center justify-between">
                     <button
+                      type="button"
                       onClick={toggleLanternPower}
                       className={`liquid-glass-button px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-md ${
                         isLanternLit
@@ -637,7 +840,14 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
                       <Lightbulb className="w-3.5 h-3.5" />
                       <span>{isLanternLit ? 'Lantern Glowing' : 'Relight Lantern'}</span>
                     </button>
-                    <span className="text-[11px] text-amber-300 font-semibold font-rounded">Tap to Flip ↻</span>
+                    <button
+                      type="button"
+                      onClick={(e) => openProjectModal(PROJECTS_DATA[2], e)}
+                      className="text-[11px] text-amber-300 hover:text-white font-semibold font-rounded flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Details</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </button>
                   </div>
                 </div>
 
@@ -647,8 +857,10 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
                     <div className="flex items-center justify-between text-xs mb-3">
                       <span className="font-bold text-amber-400 font-serif text-sm">Lantern Tales Concept</span>
                       <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
+                          soundEngine.playLanternClick();
                           setIsFlipped3(false);
                         }}
                         className="liquid-glass-pill px-2.5 py-1 text-[11px] text-slate-300 hover:text-white flex items-center gap-1 cursor-pointer"
@@ -662,7 +874,7 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
                     </p>
 
                     {/* Color Preset Palette */}
-                    <div className="space-y-2 mb-3">
+                    <div className="space-y-2 mb-3" onClick={(e) => e.stopPropagation()}>
                       <span className="text-[11px] text-slate-400">Story Ambiance:</span>
                       <div className="flex items-center gap-2">
                         {[
@@ -673,6 +885,7 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
                         ].map((h) => (
                           <button
                             key={h.color}
+                            type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelectedLanternColor(h.color);
@@ -692,7 +905,7 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
                     </div>
 
                     {/* Brightness preview slider */}
-                    <div className="liquid-glass rounded-2xl p-3.5 space-y-2">
+                    <div className="liquid-glass rounded-2xl p-3.5 space-y-2" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-between text-xs text-slate-300">
                         <span>Luminance Radius</span>
                         <span className="font-mono text-amber-300">{glowIntensity}%</span>
@@ -709,8 +922,25 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
                     </div>
                   </div>
 
-                  <div className="text-[11px] text-slate-400 text-center border-t border-slate-700/30 pt-3">
-                    Click card again to flip to front
+                  <div className="text-[11px] text-slate-400 text-center border-t border-slate-700/30 pt-3 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsFlipped3(false);
+                      }}
+                      className="hover:text-white transition-colors cursor-pointer"
+                    >
+                      Flip to front ↻
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => openProjectModal(PROJECTS_DATA[2], e)}
+                      className="text-amber-300 hover:text-white font-semibold cursor-pointer flex items-center gap-1"
+                    >
+                      <span>Full Specs</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -718,6 +948,163 @@ export const ProjectCardsSection: React.FC<ProjectCardsSectionProps> = ({
           </div>
         </div>
       </div>
+
+      {/* ======================================================== */}
+      {/* COMPACT PROJECT DETAIL MODAL / MINI-WINDOW */}
+      {/* ======================================================== */}
+      {activeModalProject && (
+        <div
+          data-cursor-exclude="true"
+          className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-md animate-fade-in"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={`project-modal-title-${activeModalProject.id}`}
+          onClick={closeProjectModal}
+        >
+          <div
+            className="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl p-6 sm:p-8 liquid-glass border border-pink-400/40 bg-slate-950/95 shadow-[0_20px_60px_rgba(0,0,0,0.85),0_0_30px_rgba(244,114,182,0.25)] text-slate-100 relative transform transition-all duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Window Header Bar (Retro OS Traffic Light Accent) */}
+            <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-pink-400/20">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-rose-500/80 inline-block" />
+                <span className="w-3 h-3 rounded-full bg-amber-400/80 inline-block" />
+                <span className="w-3 h-3 rounded-full bg-emerald-400/80 inline-block" />
+                <span className="text-[11px] font-mono text-slate-400 ml-2">
+                  pip-dream-os://projects/{activeModalProject.id}
+                </span>
+              </div>
+
+              {/* Close Button */}
+              <button
+                ref={modalCloseBtnRef}
+                type="button"
+                onClick={closeProjectModal}
+                className="p-1.5 rounded-full text-slate-400 hover:text-white bg-white/5 hover:bg-pink-500/25 border border-slate-700/50 hover:border-pink-400/40 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-300"
+                aria-label="Close project details window"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Category Badge & Title */}
+            <div className="mb-4">
+              <span className={`text-xs font-semibold uppercase tracking-wider ${activeModalProject.categoryColor}`}>
+                {activeModalProject.category}
+              </span>
+              <h3
+                id={`project-modal-title-${activeModalProject.id}`}
+                className="text-2xl sm:text-3xl font-bold font-serif text-pink-100 mt-1"
+              >
+                {activeModalProject.title}
+              </h3>
+              <p className="text-xs sm:text-sm text-pink-300/80 mt-1 italic">
+                "{activeModalProject.tagline}"
+              </p>
+            </div>
+
+            {/* Extended Overview */}
+            <div className="mb-5 space-y-2 text-xs sm:text-sm text-slate-300 leading-relaxed">
+              <p>{activeModalProject.description}</p>
+              <p className="text-slate-400">{activeModalProject.extendedOverview}</p>
+            </div>
+
+            {/* Core Technical Highlights */}
+            <div className="mb-5 p-4 rounded-2xl liquid-glass border border-slate-800 bg-black/40">
+              <div className="flex items-center gap-2 text-xs font-bold text-amber-300 mb-3">
+                <Layers className="w-4 h-4 text-amber-300" />
+                <span>Technical Specifications & Features</span>
+              </div>
+              <ul className="space-y-2">
+                {activeModalProject.features.map((feat, idx) => (
+                  <li key={idx} className="flex items-start gap-2 text-xs text-slate-200">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                    <span>{feat}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Tech Stack Pills */}
+            <div className="mb-5">
+              <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-2">
+                <Cpu className="w-3.5 h-3.5 text-sky-400" />
+                <span>Architecture & Stack</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {activeModalProject.techStack.map((tech) => (
+                  <span
+                    key={tech}
+                    className="px-2.5 py-1 rounded-full text-[11px] font-mono bg-pink-500/10 border border-pink-400/25 text-pink-200"
+                  >
+                    {tech}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Team Credits */}
+            <div className="mb-6 pt-3 border-t border-slate-800/80 text-[11px] text-slate-400">
+              <span className="font-semibold text-slate-300">Engineering Credits: </span>
+              <span>{activeModalProject.authors.join(' · ')}</span>
+            </div>
+
+            {/* Modal Bottom Action Controls */}
+            <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={closeProjectModal}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                Close (Esc)
+              </button>
+
+              {activeModalProject.interactiveType === 'flight' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    startDelivery();
+                    closeProjectModal();
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-sky-600 hover:bg-sky-500 transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Launch Flight Trajectory</span>
+                </button>
+              )}
+
+              {activeModalProject.interactiveType === 'melody' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    togglePlayLullaby();
+                    closeProjectModal();
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-pink-600 hover:bg-pink-500 transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+                >
+                  {isPlayingLullaby ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                  <span>{isPlayingLullaby ? 'Pause Lullabies' : 'Play 432Hz Celesta'}</span>
+                </button>
+              )}
+
+              {activeModalProject.interactiveType === 'lantern' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    toggleLanternPower();
+                    closeProjectModal();
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-900 bg-amber-400 hover:bg-amber-300 transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+                >
+                  <Lightbulb className="w-3.5 h-3.5" />
+                  <span>{isLanternLit ? 'Extinguish Lantern' : 'Light Golden Lantern'}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 };

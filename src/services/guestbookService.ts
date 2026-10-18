@@ -48,12 +48,9 @@ const STARTER_ENTRIES: GuestbookEntry[] = [
 const EMOJI_OPTIONS = ['⭐', '🌙', '☁️', '🏮', '✨', '🎈', '🪄', '🧸', '🧁', '🌸'];
 
 export function sanitizeText(text: string): string {
+  // Strip control characters, excessive whitespace, and normalize Unicode safely for React
   return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '')
     .trim();
 }
 

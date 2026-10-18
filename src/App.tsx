@@ -17,7 +17,17 @@ import { ChaosModeOverlay } from './components/effects/ChaosModeOverlay';
 import { ParallaxClouds, SectionDivider, StarryConstellation } from './components/effects';
 
 export default function App() {
-  const [showOpening, setShowOpening] = useState(true);
+  const [showOpening, setShowOpening] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const hasWoken = sessionStorage.getItem('pip_woken_session_v1');
+        if (hasWoken === 'true') return false;
+      } catch {
+        // storage disabled
+      }
+    }
+    return true;
+  });
   const [heroPipState, setHeroPipState] = useState<PipState>('idle');
   const [companionPipState, setCompanionPipState] = useState<PipState>('idle');
   const isUserSelectedStateRef = useRef<boolean>(false);
@@ -120,6 +130,13 @@ export default function App() {
   }, [resetInactivityTimer]);
 
   const handleWakePip = () => {
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('pip_woken_session_v1', 'true');
+      } catch {
+        // storage disabled
+      }
+    }
     setShowOpening(false);
     setHeroPipState('excited');
     setTimeout(() => {
@@ -197,6 +214,7 @@ export default function App() {
         onSecretStarUnlock={handleSecretStarUnlock}
         chaosMode={chaosMode}
         onToggleChaosMode={() => setChaosMode(!chaosMode)}
+        onReplayIntro={() => setShowOpening(true)}
       />
 
       {/* MAIN STORYBOOK SECTIONS */}
