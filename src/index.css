@@ -1,0 +1,329 @@
+@import "tailwindcss";
+
+:root {
+  --color-bg: #fff8f1;
+  --color-surface: rgba(255, 255, 255, 0.72);
+  --color-surface-solid: #ffffff;
+  --color-border: rgba(163, 64, 99, 0.22);
+  --color-border-glow: rgba(163, 64, 99, 0.4);
+  --color-text-main: #5c4033;
+  --color-text-heading: #a34063;
+  --color-text-muted: #8c6b5d;
+  --color-berry: #a34063;
+  --color-powder: #f2d9e2;
+  --color-gold: #f1c66d;
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --glass-shadow: rgba(163, 64, 99, 0.08);
+  --glass-inner-highlight: rgba(255, 255, 255, 0.9);
+}
+
+[data-theme='night'] {
+  --color-bg: #251a2a;
+  --color-surface: rgba(51, 36, 58, 0.75);
+  --color-surface-solid: #33243a;
+  --color-border: rgba(244, 114, 182, 0.22);
+  --color-border-glow: rgba(244, 114, 182, 0.45);
+  --color-text-main: #ede2db;
+  --color-text-heading: #fff8f1;
+  --color-text-muted: #b9a2b0;
+  --color-berry: #f472b6;
+  --color-powder: #3f2b48;
+  --color-gold: #f1c66d;
+  --glass-bg: rgba(51, 36, 58, 0.68);
+  --glass-border: rgba(244, 114, 182, 0.28);
+  --glass-shadow: rgba(0, 0, 0, 0.35);
+  --glass-inner-highlight: rgba(255, 255, 255, 0.15);
+}
+
+@layer base {
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text-main);
+    font-family: 'Nunito', system-ui, -apple-system, sans-serif;
+    transition: background-color 0.5s ease, color 0.5s ease;
+  }
+  h1, h2, h3, h4, .font-serif {
+    font-family: 'DM Serif Display', Georgia, serif;
+  }
+  .font-rounded {
+    font-family: 'Fredoka', 'Plus Jakarta Sans', system-ui, sans-serif;
+  }
+}
+
+/* Custom Ghost Cursor System */
+html.has-custom-cursor,
+html.has-custom-cursor *,
+body.has-custom-cursor,
+body.has-custom-cursor * {
+  cursor: none !important;
+}
+
+/* Retain standard I-beam cursor over text inputs for accessible typing */
+html.has-custom-cursor input[type="text"],
+html.has-custom-cursor input[type="search"],
+html.has-custom-cursor input[type="range"],
+html.has-custom-cursor textarea,
+body.has-custom-cursor input[type="text"],
+body.has-custom-cursor input[type="search"],
+body.has-custom-cursor input[type="range"],
+body.has-custom-cursor textarea {
+  cursor: auto !important;
+}
+
+/* 3D Card Flip Essentials */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Liquid Glass Surfaces */
+.liquid-glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 10px 30px 0 var(--glass-shadow), inset 0 1px 1px 0 var(--glass-inner-highlight);
+}
+
+.liquid-glass-pill {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 14px 0 var(--glass-shadow), inset 0 1px 0 0 var(--glass-inner-highlight);
+  border-radius: 9999px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.liquid-glass-pill:hover {
+  border-color: var(--color-border-glow);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px 0 var(--glass-shadow), 0 0 12px 0 var(--glass-border);
+}
+
+.liquid-glass-button {
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 6px 20px 0 var(--glass-shadow), inset 0 1px 1px 0 var(--glass-inner-highlight);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.liquid-glass-button:hover {
+  border-color: var(--color-border-glow);
+  transform: translateY(-1.5px);
+  box-shadow: 0 10px 24px 0 var(--glass-shadow), 0 0 16px 0 var(--glass-border);
+}
+
+.liquid-glass-button:active {
+  transform: translateY(0.5px) scale(0.99);
+}
+
+/* Keyframe Animations */
+@keyframes pipFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes pipBreathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes pipBounce {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  30% {
+    transform: translateY(-16px) scale(1.06, 0.96);
+  }
+  60% {
+    transform: translateY(-4px) scale(0.98, 1.02);
+  }
+}
+
+@keyframes floatNote {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) translateX(0) scale(0.8);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translateY(-20px) translateX(12px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-45px) translateX(24px) scale(1.1);
+  }
+}
+
+@keyframes floatZzz {
+  0% {
+    opacity: 0;
+    transform: translateY(5px) scale(0.7);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translateY(-15px) translateX(8px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-30px) translateX(16px) scale(1.2);
+  }
+}
+
+@keyframes starTwinkle {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+.animate-pip-float {
+  animation: pipFloat 4s ease-in-out infinite;
+}
+
+.animate-pip-breathe {
+  animation: pipBreathe 3.5s ease-in-out infinite;
+}
+
+.animate-pip-bounce {
+  animation: pipBounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.animate-float-note {
+  animation: floatNote 2.5s ease-out infinite;
+}
+
+.animate-float-zzz {
+  animation: floatZzz 3s ease-out infinite;
+}
+
+.animate-twinkle {
+  animation: starTwinkle 3s ease-in-out infinite;
+}
+
+/* Scroll Reveal Fade-in and Slide-up Animations */
+.reveal-fade-up {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1), transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.reveal-fade-up.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-fade-up-sm {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1), transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.reveal-fade-up-sm.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-fade-up-lg {
+  opacity: 0;
+  transform: translateY(42px);
+  transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1), transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.reveal-fade-up-lg.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-delay-75 { transition-delay: 75ms; }
+.reveal-delay-100 { transition-delay: 100ms; }
+.reveal-delay-150 { transition-delay: 150ms; }
+.reveal-delay-200 { transition-delay: 200ms; }
+.reveal-delay-225 { transition-delay: 225ms; }
+.reveal-delay-300 { transition-delay: 300ms; }
+.reveal-delay-400 { transition-delay: 400ms; }
+.reveal-delay-450 { transition-delay: 450ms; }
+.reveal-delay-500 { transition-delay: 500ms; }
+.reveal-delay-600 { transition-delay: 600ms; }
+
+/* 3D Flip Text Animation */
+@keyframes char3dFlip {
+  0%, 20% {
+    transform: rotateX(0deg);
+  }
+  45%, 55% {
+    transform: rotateX(180deg);
+  }
+  80%, 100% {
+    transform: rotateX(360deg);
+  }
+}
+
+.flip-char {
+  animation: char3dFlip var(--flip-duration, 2.4s) cubic-bezier(0.45, 0.05, 0.55, 0.95) var(--flip-delay, 0s) var(--flip-iteration, infinite);
+  backface-visibility: hidden;
+}
+
+/* Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  .reveal-fade-up,
+  .reveal-fade-up.is-revealed,
+  .reveal-fade-up-sm,
+  .reveal-fade-up-sm.is-revealed,
+  .reveal-fade-up-lg,
+  .reveal-fade-up-lg.is-revealed {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+  .flip-char {
+    animation: none !important;
+    transform: none !important;
+  }
+  .animate-pip-float,
+  .animate-pip-breathe,
+  .animate-pip-bounce,
+  .animate-float-note,
+  .animate-float-zzz,
+  .animate-twinkle {
+    animation: none !important;
+    transition: none !important;
+  }
+  .preserve-3d {
+    transform-style: flat !important;
+  }
+}
+
+

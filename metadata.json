@@ -1,0 +1,6 @@
+{
+  "name": "Pip's Dream OS - Character Engine",
+  "description": "An interactive character system and cozy bedtime operating system featuring Pip the Junior Dream Engineer.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
