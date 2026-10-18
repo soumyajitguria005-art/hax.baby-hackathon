@@ -148,6 +148,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Optional Responsive Chaos Mode Toggle */}
             {onToggleChaosMode && (
               <button
+                type="button"
                 onClick={() => {
                   soundEngine.playButtonTick();
                   onToggleChaosMode();
@@ -155,14 +156,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                 aria-pressed={chaosMode}
                 className={`liquid-glass-pill px-2.5 sm:px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                   chaosMode
-                    ? 'text-pink-200 border-pink-400 bg-pink-500/25 shadow-[0_0_10px_rgba(244,114,182,0.5)]'
+                    ? 'text-pink-100 border-pink-400 bg-pink-500/30 shadow-[0_0_12px_rgba(244,114,182,0.6)]'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
-                title={chaosMode ? 'Disable Chaos Mode' : 'Enable Optional Retro Chaos Mode'}
-                aria-label={chaosMode ? 'Disable Chaos Mode' : 'Enable Optional Retro Chaos Mode'}
+                title={chaosMode ? 'Chaos Mode is ON — Click to disable' : 'Chaos Mode is OFF — Click to enable playful effects'}
+                aria-label={chaosMode ? 'Chaos Mode is ON — Click to disable' : 'Chaos Mode is OFF — Click to enable playful effects'}
               >
                 <Zap className={`w-3.5 h-3.5 ${chaosMode ? 'fill-amber-300 text-amber-300 animate-bounce' : 'text-slate-400'}`} />
-                <span className="hidden sm:inline">{chaosMode ? 'Chaos: ON' : 'Chaos'}</span>
+                <span className="text-[10px] sm:text-xs font-mono font-bold whitespace-nowrap">
+                  {chaosMode ? 'Chaos: ON' : 'Chaos: OFF'}
+                </span>
               </button>
             )}
 

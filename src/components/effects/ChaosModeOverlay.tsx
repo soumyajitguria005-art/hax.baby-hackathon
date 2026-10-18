@@ -38,8 +38,12 @@ export const ChaosModeOverlay: React.FC<ChaosModeOverlayProps> = ({ active, onDi
   useEffect(() => {
     if (!active) {
       setMotes([]);
+      document.body.classList.remove('chaos-mode-active');
       return;
     }
+
+    // Apply active chaos state to body for CSS transition enhancements
+    document.body.classList.add('chaos-mode-active');
 
     // Play whimsical activation chime
     soundEngine.playConstellationChime(3);
@@ -83,6 +87,7 @@ export const ChaosModeOverlay: React.FC<ChaosModeOverlayProps> = ({ active, onDi
     window.addEventListener('click', handleGlobalClick, { passive: true });
 
     return () => {
+      document.body.classList.remove('chaos-mode-active');
       window.removeEventListener('click', handleGlobalClick);
     };
   }, [active, reducedMotion]);

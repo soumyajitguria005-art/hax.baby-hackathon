@@ -14,6 +14,7 @@ interface GuestbookSectionProps {
 export const GuestbookSection: React.FC<GuestbookSectionProps> = ({ theme }) => {
   const [entries, setEntries] = useState<GuestbookEntry[]>([]);
   const [isShared, setIsShared] = useState<boolean>(false);
+  const [statusText, setStatusText] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [authorName, setAuthorName] = useState<string>('');
@@ -29,6 +30,7 @@ export const GuestbookSection: React.FC<GuestbookSectionProps> = ({ theme }) => 
       if (isMounted) {
         setEntries(res.entries);
         setIsShared(res.isShared);
+        setStatusText(res.statusMessage);
         setIsLoading(false);
       }
     }
@@ -114,12 +116,10 @@ export const GuestbookSection: React.FC<GuestbookSectionProps> = ({ theme }) => 
           </p>
 
           {/* Transparent Persistence Mode Badge */}
-          <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-mono border border-pink-400/20 bg-pink-500/5">
-            <span className={`w-2 h-2 rounded-full ${isShared ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+          <div className="mt-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-mono border border-pink-400/20 bg-pink-500/5">
+            <span className={`w-2 h-2 rounded-full shrink-0 ${isShared ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
             <span style={{ color: 'var(--color-text-muted)' }}>
-              {isShared
-                ? 'Status: Live Shared Database Active'
-                : 'Status: Local Browser Demo (Shared database not configured)'}
+              {statusText || (isShared ? 'Live Shared Supabase Database' : 'Local Session Demo Mode')}
             </span>
           </div>
         </div>

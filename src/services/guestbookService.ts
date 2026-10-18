@@ -1,3 +1,5 @@
+import { supabase, isSupabaseConfigured, getSupabaseConfigStatus } from '../lib/supabase';
+
 export interface GuestbookEntry {
   id: string;
   authorName: string;
@@ -10,10 +12,11 @@ export interface GuestbookEntry {
 export interface GuestbookResponse {
   entries: GuestbookEntry[];
   isShared: boolean;
-  message?: string;
+  statusMessage: string;
+  missingConfig?: string[];
 }
 
-const STORAGE_KEY = 'pip_dream_guestbook_entries';
+const STORAGE_KEY = 'pip_dream_guestbook_entries_v2';
 
 const STARTER_ENTRIES: GuestbookEntry[] = [
   {
@@ -54,29 +57,46 @@ export function sanitizeText(text: string): string {
     .trim();
 }
 
+/**
+ * Fetches all guestbook entries, preferring Supabase if configured,
+ * otherwise falling back to persistent local storage with transparent reporting.
+ */
 export async function fetchGuestbookEntries(): Promise<GuestbookResponse> {
-  // 1. Check if a live backend route is reachable
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
-    const res = await fetch('/api/guestbook', { signal: controller.signal });
-    clearTimeout(timeoutId);
+  const config = getSupabaseConfigStatus();
 
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data.entries)) {
+  // 1. Live Supabase database integration
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('guestbook_entries')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (!error && Array.isArray(data)) {
+        const mappedEntries: GuestbookEntry[] = data.map((row) => ({
+          id: row.id,
+          authorName: row.author_name,
+          message: row.message,
+          createdAt: row.created_at,
+          avatarEmoji: row.avatar_emoji || '⭐',
+          isLocal: false,
+        }));
+
         return {
-          entries: data.entries,
+          entries: mappedEntries,
           isShared: true,
-          message: 'Connected to live shared backend.',
+          statusMessage: 'Connected to live shared Supabase database.',
         };
+      } else if (error) {
+        console.warn('Supabase query error (table may need migration):', error.message);
       }
+    } catch (err) {
+      console.warn('Failed to communicate with Supabase:', err);
     }
-  } catch {
-    // Backend API not reachable or not configured
   }
 
-  // 2. Fallback to browser persistent storage with honest reporting
+  // 2. Persistent Local Browser Fallback with Honest Reporting
   if (typeof window !== 'undefined') {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -86,29 +106,40 @@ export async function fetchGuestbookEntries(): Promise<GuestbookResponse> {
           return {
             entries: parsed,
             isShared: false,
-            message: 'Shared database backend not configured. Operating in persistent local browser demo mode.',
+            missingConfig: config.missingKeys,
+            statusMessage: config.missingKeys.length > 0
+              ? `Local Session Demo (${config.missingKeys.join(', ')} not configured)`
+              : 'Local Session Demo',
           };
         }
       }
+
       // Initialize with starters if nothing saved yet
       localStorage.setItem(STORAGE_KEY, JSON.stringify(STARTER_ENTRIES));
       return {
         entries: STARTER_ENTRIES,
         isShared: false,
-        message: 'Shared database backend not configured. Operating in persistent local browser demo mode.',
+        missingConfig: config.missingKeys,
+        statusMessage: config.missingKeys.length > 0
+          ? `Local Session Demo (${config.missingKeys.join(', ')} not configured)`
+          : 'Local Session Demo',
       };
     } catch {
-      // localStorage unavailable
+      // LocalStorage not accessible
     }
   }
 
   return {
     entries: STARTER_ENTRIES,
     isShared: false,
-    message: 'Operating in memory demo mode.',
+    statusMessage: 'In-Memory Demo Mode',
   };
 }
 
+/**
+ * Submits a new guestbook entry with length validation, XSS sanitization,
+ * and duplicate-submit prevention.
+ */
 export async function submitGuestbookEntry(
   authorName: string,
   message: string
@@ -116,7 +147,7 @@ export async function submitGuestbookEntry(
   const trimmedName = authorName.trim();
   const trimmedMessage = message.trim();
 
-  // Strict Validation
+  // Strict Validation Rules
   if (!trimmedName || trimmedName.length < 2) {
     return { success: false, error: 'Name must be at least 2 characters long.', isShared: false };
   }
@@ -134,30 +165,51 @@ export async function submitGuestbookEntry(
   const cleanMessage = sanitizeText(trimmedMessage);
   const randomEmoji = EMOJI_OPTIONS[Math.floor(Math.random() * EMOJI_OPTIONS.length)];
 
-  // Attempt backend POST
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2500);
-    const res = await fetch('/api/guestbook', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ authorName: cleanName, message: cleanMessage, avatarEmoji: randomEmoji }),
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
+  // 1. Attempt Supabase live insertion if configured
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('guestbook_entries')
+        .insert([
+          {
+            author_name: cleanName,
+            message: cleanMessage,
+            avatar_emoji: randomEmoji,
+          },
+        ])
+        .select()
+        .single();
 
-    if (res.ok) {
-      const data = await res.json();
-      if (data.entry) {
-        return { success: true, entry: data.entry, isShared: true };
+      if (!error && data) {
+        const liveEntry: GuestbookEntry = {
+          id: data.id,
+          authorName: data.author_name,
+          message: data.message,
+          createdAt: data.created_at,
+          avatarEmoji: data.avatar_emoji || randomEmoji,
+          isLocal: false,
+        };
+        return { success: true, entry: liveEntry, isShared: true };
+      } else if (error) {
+        console.warn('Supabase insert error:', error.message);
+        return {
+          success: false,
+          error: `Database error: ${error.message}. Please verify migrations are applied.`,
+          isShared: true,
+        };
       }
+    } catch (err: unknown) {
+      console.warn('Supabase request failed:', err);
+      return {
+        success: false,
+        error: 'Network connection to Supabase failed. Please try again.',
+        isShared: true,
+      };
     }
-  } catch {
-    // Backend API not reachable
   }
 
-  // Local storage submission
-  const newEntry: GuestbookEntry = {
+  // 2. Persistent Local Storage Submission
+  const localEntry: GuestbookEntry = {
     id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     authorName: cleanName,
     message: cleanMessage,
@@ -168,10 +220,10 @@ export async function submitGuestbookEntry(
 
   try {
     const current = await fetchGuestbookEntries();
-    const updated = [newEntry, ...current.entries];
+    const updated = [localEntry, ...current.entries];
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    return { success: true, entry: newEntry, isShared: false };
+    return { success: true, entry: localEntry, isShared: false };
   } catch {
-    return { success: false, error: 'Could not save entry to local storage.', isShared: false };
+    return { success: false, error: 'Could not write to local storage.', isShared: false };
   }
 }
