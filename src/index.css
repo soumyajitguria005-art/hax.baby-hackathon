@@ -71,6 +71,37 @@ body.has-custom-cursor textarea {
   cursor: auto !important;
 }
 
+/* Restore normal system cursor over top navbar, character-state buttons, and developer bar */
+html.has-custom-cursor header,
+html.has-custom-cursor header *,
+html.has-custom-cursor nav,
+html.has-custom-cursor nav *,
+html.has-custom-cursor [data-cursor-exclude],
+html.has-custom-cursor [data-cursor-exclude] *,
+body.has-custom-cursor header,
+body.has-custom-cursor header *,
+body.has-custom-cursor nav,
+body.has-custom-cursor nav *,
+body.has-custom-cursor [data-cursor-exclude],
+body.has-custom-cursor [data-cursor-exclude] * {
+  cursor: auto !important;
+}
+
+html.has-custom-cursor header button,
+html.has-custom-cursor header a,
+html.has-custom-cursor nav button,
+html.has-custom-cursor nav a,
+html.has-custom-cursor [data-cursor-exclude] button,
+html.has-custom-cursor [data-cursor-exclude] a,
+body.has-custom-cursor header button,
+body.has-custom-cursor header a,
+body.has-custom-cursor nav button,
+body.has-custom-cursor nav a,
+body.has-custom-cursor [data-cursor-exclude] button,
+body.has-custom-cursor [data-cursor-exclude] a {
+  cursor: pointer !important;
+}
+
 /* 3D Card Flip Essentials */
 .perspective-1000 {
   perspective: 1000px;
@@ -324,6 +355,30 @@ body.has-custom-cursor textarea {
   .preserve-3d {
     transform-style: flat !important;
   }
+  .animate-button-bounce {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Button Bouncy Pop Animation for Character State Selectors */
+@keyframes buttonBouncyPop {
+  0% {
+    transform: scale(0.95);
+  }
+  40% {
+    transform: scale(1.06);
+  }
+  70% {
+    transform: scale(1.015);
+  }
+  100% {
+    transform: scale(1.03);
+  }
+}
+
+.animate-button-bounce {
+  animation: buttonBouncyPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
 

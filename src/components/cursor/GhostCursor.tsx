@@ -12,11 +12,13 @@ interface SparkleParticle {
 
 interface GhostCursorProps {
   theme?: 'day' | 'night';
+  chaosMode?: boolean;
 }
 
 const SPARKLE_PALETTE = ['#F1C66D', '#F472B6', '#FDE047', '#FFF8F1'];
+const CHAOS_PALETTE = ['#F1C66D', '#F472B6', '#38BDF8', '#C084FC', '#FFF8F1'];
 
-export const GhostCursor: React.FC<GhostCursorProps> = ({ theme = 'night' }) => {
+export const GhostCursor: React.FC<GhostCursorProps> = ({ theme = 'night', chaosMode = false }) => {
   const [expression, setExpression] = useState<GhostExpression>('default');
   const [sparkles, setSparkles] = useState<SparkleParticle[]>([]);
   const [starGlow, setStarGlow] = useState(false);
@@ -74,13 +76,26 @@ export const GhostCursor: React.FC<GhostCursorProps> = ({ theme = 'night' }) => 
 
       // Detect hovered interactive elements
       const target = e.target as HTMLElement | null;
+      const isExcludedArea = Boolean(
+        target?.closest('header, nav, [data-cursor-exclude]')
+      );
+
+      // Hide custom cursor over excluded areas (navbar, character state buttons, developer bar)
+      if (isExcludedArea) {
+        if (ghostElementRef.current) ghostElementRef.current.style.opacity = '0';
+        if (pointerDotRef.current) pointerDotRef.current.style.opacity = '0';
+      } else {
+        if (ghostElementRef.current) ghostElementRef.current.style.opacity = '1';
+        if (pointerDotRef.current) pointerDotRef.current.style.opacity = '1';
+      }
+
       const isProjectCard = Boolean(target?.closest('.perspective-1000, #projects [role="button"]'));
       const isThemeToggle = Boolean(target?.closest('button[aria-label*="Mode"], [title*="Mode"]'));
       const isClickable = Boolean(
         target?.closest('a, button, input, textarea, select, [role="button"], [tabindex="0"], .cursor-pointer')
       );
 
-      isHoveringLink.current = isClickable;
+      isHoveringLink.current = isClickable && !isExcludedArea;
 
       if (isThemeToggle) {
         isInteractingSpecial.current = 'theme';
@@ -94,26 +109,27 @@ export const GhostCursor: React.FC<GhostCursorProps> = ({ theme = 'night' }) => 
         } else {
           isInteractingSpecial.current = null;
           if (!isClickSquash.current) {
-            setExpression(isClickable ? 'hover' : 'following');
+            setExpression(isClickable && !isExcludedArea ? 'hover' : 'following');
           }
         }
       }
 
-      // Sparkle emission during movement (throttled every ~30px)
+      // Sparkle emission during movement (throttled every ~30px, disabled in excluded areas)
       const dist = Math.hypot(
         e.clientX - lastSparklePos.current.x,
         e.clientY - lastSparklePos.current.y
       );
 
-      if (dist > 30) {
+      if (dist > 30 && !isExcludedArea) {
         lastSparklePos.current = { x: e.clientX, y: e.clientY };
+        const palette = chaosMode ? CHAOS_PALETTE : SPARKLE_PALETTE;
         const newSparkle: SparkleParticle = {
           id: nextSparkleId.current++,
           x: e.clientX + 6 + (Math.random() - 0.5) * 16,
           y: e.clientY + 20 + (Math.random() - 0.5) * 14,
           size: Math.random() * 6 + 4,
           opacity: 0.85,
-          color: SPARKLE_PALETTE[Math.floor(Math.random() * SPARKLE_PALETTE.length)],
+          color: palette[Math.floor(Math.random() * palette.length)],
         };
         setSparkles((prev) => [...prev.slice(-12), newSparkle]);
       }
@@ -223,12 +239,13 @@ export const GhostCursor: React.FC<GhostCursorProps> = ({ theme = 'night' }) => 
         ghostElementRef.current.style.transform = `translate3d(${ghostPos.current.x - 14}px, ${ghostPos.current.y - 14}px, 0) scale(${scaleX}, ${scaleY})`;
       }
 
-      // Decay sparkles smoothly
-      setSparkles((prev) =>
-        prev
+      // Decay sparkles smoothly only when sparkles exist (avoids re-rendering idle react state)
+      setSparkles((prev) => {
+        if (prev.length === 0) return prev;
+        return prev
           .map((s) => ({ ...s, opacity: s.opacity - 0.05, size: Math.max(0, s.size - 0.25) }))
-          .filter((s) => s.opacity > 0)
-      );
+          .filter((s) => s.opacity > 0);
+      });
     };
 
     animId = requestAnimationFrame(animateLoop);
@@ -283,7 +300,7 @@ export const GhostCursor: React.FC<GhostCursorProps> = ({ theme = 'night' }) => 
               transition: 'opacity 0.08s linear',
             }}
           >
-            ✦
+            {['✦', '✧', '★'][s.id % 3]}
           </span>
         ))}
       </div>

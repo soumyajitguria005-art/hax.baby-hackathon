@@ -12,15 +12,31 @@ import { CharacterPlayground } from './components/character/CharacterPlayground'
 import { Footer } from './components/layout/Footer';
 import { soundEngine } from './utils/soundEffects';
 import { useIntersectionObserver } from './hooks/useIntersectionObserver';
+import { GuestbookSection } from './components/sections/GuestbookSection';
+import { ChaosModeOverlay } from './components/effects/ChaosModeOverlay';
 import { ParallaxClouds, SectionDivider, StarryConstellation } from './components/effects';
 
 export default function App() {
   const [showOpening, setShowOpening] = useState(true);
   const [heroPipState, setHeroPipState] = useState<PipState>('idle');
   const [companionPipState, setCompanionPipState] = useState<PipState>('idle');
-  const [theme, setTheme] = useState<'day' | 'night'>('night');
+  const isUserSelectedStateRef = useRef<boolean>(false);
+  const [chaosMode, setChaosMode] = useState<boolean>(false);
+  const [theme, setTheme] = useState<'day' | 'night'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('pip-dream-theme');
+      if (saved === 'day' || saved === 'night') return saved;
+    }
+    return 'night';
+  });
   const [enableTilt, setEnableTilt] = useState<boolean>(true);
-  const [soundMuted, setSoundMuted] = useState<boolean>(true); // Start muted by default
+  const [soundMuted, setSoundMuted] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('pip-dream-sound-muted');
+      if (saved !== null) return saved === 'true';
+    }
+    return true; // Start muted by default
+  });
 
   // Custom Intersection Observer hooks providing isRevealed state for section wrapping
   const { ref: projectCardsSectionRef, isRevealed: isProjectCardsRevealed } =
@@ -45,14 +61,24 @@ export default function App() {
   const inactivityTimerRef = useRef<number | null>(null);
   const isBusyRef = useRef<boolean>(false);
 
-  // Sync theme with HTML data-theme attribute
+  // Sync theme with HTML data-theme attribute & localStorage
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    try {
+      localStorage.setItem('pip-dream-theme', theme);
+    } catch {
+      // ignore
+    }
   }, [theme]);
 
-  // Sound Engine sync
+  // Sound Engine sync & localStorage
   useEffect(() => {
     soundEngine.setMuted(soundMuted);
+    try {
+      localStorage.setItem('pip-dream-sound-muted', String(soundMuted));
+    } catch {
+      // ignore
+    }
   }, [soundMuted]);
 
   const resetInactivityTimer = useCallback(() => {
@@ -61,17 +87,19 @@ export default function App() {
     }
 
     inactivityTimerRef.current = window.setTimeout(() => {
-      if (!isBusyRef.current) {
+      if (!isBusyRef.current && !isUserSelectedStateRef.current) {
         setHeroPipState((curr) => (curr !== 'flying' && curr !== 'sleeping' ? 'sleepy' : curr));
         setCompanionPipState((curr) => (curr !== 'flying' && curr !== 'sleeping' ? 'sleepy' : curr));
       }
-    }, 10000);
+    }, 12000);
   }, []);
 
   useEffect(() => {
     const handleUserActivity = () => {
-      setHeroPipState((curr) => (curr === 'sleepy' ? 'idle' : curr));
-      setCompanionPipState((curr) => (curr === 'sleepy' ? 'idle' : curr));
+      if (!isUserSelectedStateRef.current) {
+        setHeroPipState((curr) => (curr === 'sleepy' ? 'idle' : curr));
+        setCompanionPipState((curr) => (curr === 'sleepy' ? 'idle' : curr));
+      }
       resetInactivityTimer();
     };
 
@@ -124,7 +152,20 @@ export default function App() {
   const handleSecretStarUnlock = () => {
     setHeroPipState('surprised');
     setCompanionPipState('surprised');
+    setTimeout(() => {
+      setHeroPipState('happy');
+      setCompanionPipState('happy');
+      setTimeout(() => {
+        setHeroPipState('idle');
+        setCompanionPipState('idle');
+      }, 2500);
+    }, 1800);
   };
+
+  const handlePipStateChange = useCallback((st: PipState) => {
+    setHeroPipState(st);
+    setCompanionPipState(st);
+  }, []);
 
   return (
     <div className="min-h-screen relative overflow-x-hidden transition-colors duration-500">
@@ -132,13 +173,20 @@ export default function App() {
       {showOpening && <OpeningScene onWakePip={handleWakePip} />}
 
       {/* CUTE MINIMAL CUSTOM GHOST CURSOR WITH TRAILING MOTION & SPARKLES */}
-      <GhostCursor theme={theme} />
+      <GhostCursor theme={theme} chaosMode={chaosMode} />
 
       {/* SUBTLE HORIZONTAL PARALLAX BACKGROUND CLOUD SVG ELEMENTS TIED TO SCROLL */}
       <ParallaxClouds theme={theme} />
 
       {/* STARRY CONSTELLATION OVERLAY (Active in Night mode: click stars to connect lines & play chimes) */}
       <StarryConstellation theme={theme} />
+
+      {/* RESPONSIVE RETRO CHAOS MODE OVERLAY (OFF BY DEFAULT) */}
+      <ChaosModeOverlay
+        active={chaosMode}
+        onDisable={() => setChaosMode(false)}
+        theme={theme}
+      />
 
       {/* FLOATING LIQUID GLASS NAVIGATION */}
       <Navbar
@@ -147,6 +195,8 @@ export default function App() {
         soundMuted={soundMuted}
         onToggleSound={handleToggleSound}
         onSecretStarUnlock={handleSecretStarUnlock}
+        chaosMode={chaosMode}
+        onToggleChaosMode={() => setChaosMode(!chaosMode)}
       />
 
       {/* MAIN STORYBOOK SECTIONS */}
@@ -154,10 +204,7 @@ export default function App() {
         {/* HERO SECTION */}
         <HeroSection
           pipState={heroPipState}
-          onPipStateChange={(st) => {
-            setHeroPipState(st);
-            setCompanionPipState(st);
-          }}
+          onPipStateChange={handlePipStateChange}
           enableTilt={enableTilt}
           theme={theme}
         />
@@ -167,7 +214,7 @@ export default function App() {
           variant="wave"
           theme={theme}
           badgeIcon="sparkle"
-          badgeLabel="Inventions"
+          badgeLabel="Dream Studio"
         />
 
         {/* 3D FLIP PROJECT CARDS SECTION WRAPPED IN INTERSECTION OBSERVER */}
@@ -177,10 +224,7 @@ export default function App() {
         >
           <ProjectCardsSection
             isRevealed={isProjectCardsRevealed}
-            onPipStateChange={(st) => {
-              setHeroPipState(st);
-              setCompanionPipState(st);
-            }}
+            onPipStateChange={handlePipStateChange}
             theme={theme}
           />
         </div>
@@ -266,6 +310,7 @@ export default function App() {
             <CharacterPlayground
               currentState={companionPipState}
               onSelectState={(st) => {
+                isUserSelectedStateRef.current = true;
                 setCompanionPipState(st);
                 setHeroPipState(st);
               }}
@@ -278,7 +323,18 @@ export default function App() {
           </div>
         </section>
 
-        {/* NARRATIVE DIVIDER: Studio -> Footer */}
+        {/* NARRATIVE DIVIDER: Studio -> Starlight Notes */}
+        <SectionDivider
+          variant="wave"
+          theme={theme}
+          badgeIcon="sparkle"
+          badgeLabel="Starlight Register"
+        />
+
+        {/* LIVE GUESTBOOK SECTION */}
+        <GuestbookSection theme={theme} />
+
+        {/* NARRATIVE DIVIDER: Guestbook -> Footer */}
         <SectionDivider
           variant="constellation"
           theme={theme}

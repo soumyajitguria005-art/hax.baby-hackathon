@@ -1,0 +1,147 @@
+{
+  "updatedAt": "2026-10-18T12:53:30.851Z",
+  "officialAvatar": {
+    "sourceFile": "pip-avatar-cloud.png",
+    "assetPath": "/assets/pip-avatar-cloud.png",
+    "status": "ready"
+  },
+  "totalStates": 12,
+  "extractedStates": [
+    {
+      "state": "idle",
+      "label": "Idle",
+      "description": "Pip sitting on cloud holding a star, gentle smile",
+      "gridPosition": {
+        "row": 0,
+        "col": 0
+      },
+      "assetPath": "/assets/pip/expressions/idle.png",
+      "status": "ready"
+    },
+    {
+      "state": "happy",
+      "label": "Happy",
+      "description": "Pip cheering with joyful sparkle eyes and smiling star",
+      "gridPosition": {
+        "row": 0,
+        "col": 1
+      },
+      "assetPath": "/assets/pip/expressions/happy.png",
+      "status": "ready"
+    },
+    {
+      "state": "curious",
+      "label": "Curious",
+      "description": "Pip tilting head inquisitively with question mark",
+      "gridPosition": {
+        "row": 0,
+        "col": 2
+      },
+      "assetPath": "/assets/pip/expressions/curious.png",
+      "status": "ready"
+    },
+    {
+      "state": "excited",
+      "label": "Excited",
+      "description": "Pip jumping with glee, cheerful grin and stars",
+      "gridPosition": {
+        "row": 0,
+        "col": 3
+      },
+      "assetPath": "/assets/pip/expressions/excited.png",
+      "status": "ready"
+    },
+    {
+      "state": "sleepy",
+      "label": "Sleepy",
+      "description": "Pip yawning with soft drooping eyes",
+      "gridPosition": {
+        "row": 1,
+        "col": 0
+      },
+      "assetPath": "/assets/pip/expressions/sleepy.png",
+      "status": "ready"
+    },
+    {
+      "state": "surprised",
+      "label": "Surprised",
+      "description": "Pip with wide starry eyes and open mouth",
+      "gridPosition": {
+        "row": 1,
+        "col": 1
+      },
+      "assetPath": "/assets/pip/expressions/surprised.png",
+      "status": "ready"
+    },
+    {
+      "state": "shy",
+      "label": "Shy",
+      "description": "Pip blushing with rosy pink cheeks and hearts",
+      "gridPosition": {
+        "row": 1,
+        "col": 2
+      },
+      "assetPath": "/assets/pip/expressions/shy.png",
+      "status": "ready"
+    },
+    {
+      "state": "reading",
+      "label": "Reading",
+      "description": "Pip reading a bedtime storybook",
+      "gridPosition": {
+        "row": 1,
+        "col": 3
+      },
+      "assetPath": "/assets/pip/expressions/reading.png",
+      "status": "ready"
+    },
+    {
+      "state": "working",
+      "label": "Working",
+      "description": "Pip at the dream blueprints drafting desk",
+      "gridPosition": {
+        "row": 2,
+        "col": 0
+      },
+      "assetPath": "/assets/pip/expressions/working.png",
+      "status": "ready"
+    },
+    {
+      "state": "flying",
+      "label": "Flying",
+      "description": "Pip swooping through clouds with stardust trail",
+      "gridPosition": {
+        "row": 2,
+        "col": 1
+      },
+      "assetPath": "/assets/pip/expressions/flying.png",
+      "status": "ready"
+    },
+    {
+      "state": "holding-lantern",
+      "label": "Holding Lantern",
+      "description": "Pip holding glowing golden starlight lantern",
+      "gridPosition": {
+        "row": 2,
+        "col": 2
+      },
+      "assetPath": "/assets/pip/expressions/holding-lantern.png",
+      "status": "ready"
+    },
+    {
+      "state": "sleeping",
+      "label": "Sleeping",
+      "description": "Pip curled up asleep on a cloud with bunny plush",
+      "gridPosition": {
+        "row": 2,
+        "col": 3
+      },
+      "assetPath": "/assets/pip/expressions/sleeping.png",
+      "status": "ready"
+    }
+  ],
+  "pendingStates": [],
+  "notes": [
+    "Official character avatar and 12 vector-rendered individual expression assets generated with high-DPI fidelity."
+  ]
+}

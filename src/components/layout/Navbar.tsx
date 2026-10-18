@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Moon, Sun, Volume2, VolumeX, Star, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Moon, Sun, Volume2, VolumeX, Star, Sparkles, Zap, BookOpen } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { soundEngine } from '../../utils/soundEffects';
 
@@ -9,6 +9,8 @@ interface NavbarProps {
   soundMuted: boolean;
   onToggleSound: () => void;
   onSecretStarUnlock: () => void;
+  chaosMode?: boolean;
+  onToggleChaosMode?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -17,31 +19,51 @@ export const Navbar: React.FC<NavbarProps> = ({
   soundMuted,
   onToggleSound,
   onSecretStarUnlock,
+  chaosMode = false,
+  onToggleChaosMode,
 }) => {
   const [starClickCount, setStarClickCount] = useState(0);
-  const [showSecretModal, setShowSecretModal] = useState(false);
+  const [showSecretToast, setShowSecretToast] = useState(false);
+  const toastTimeoutRef = useRef<number | null>(null);
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleStarClick = () => {
     soundEngine.playStarSparkle();
     const newCount = starClickCount + 1;
     setStarClickCount(newCount);
 
-    if (newCount >= 5) {
+    if (newCount >= 4) {
       setStarClickCount(0);
-      setShowSecretModal(true);
+      setShowSecretToast(true);
       onSecretStarUnlock();
 
-      // Trigger confetti celebration
+      // Trigger gentle, non-disruptive confetti celebration
       try {
         confetti({
-          particleCount: 75,
-          spread: 60,
-          origin: { y: 0.15 },
+          particleCount: 45,
+          spread: 50,
+          origin: { y: 0.12 },
           colors: ['#f1c66d', '#f472b6', '#a34063', '#ffffff'],
         });
       } catch {
         // Fallback if canvas-confetti is unavailable
       }
+
+      // Auto-dismiss toast after 6.5 seconds so visitor is never trapped
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+      toastTimeoutRef.current = window.setTimeout(() => {
+        setShowSecretToast(false);
+      }, 6500);
     }
   };
 
@@ -62,9 +84,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           </a>
 
           {/* Zone 2: Navigation Links (Clean glass pills) */}
-          <nav className="hidden md:flex items-center gap-1.5 text-xs font-semibold">
+          <nav className="hidden md:flex items-center gap-1.5 text-xs font-semibold" aria-label="Main Navigation">
             <a
               href="#hero"
+              onClick={() => soundEngine.playButtonTick()}
               className="px-3.5 py-1.5 rounded-full hover:bg-white/20 dark:hover:bg-white/10 transition-colors whitespace-nowrap"
               style={{ color: 'var(--color-text-main)' }}
             >
@@ -72,6 +95,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </a>
             <a
               href="#about"
+              onClick={() => soundEngine.playButtonTick()}
               className="px-3.5 py-1.5 rounded-full hover:bg-white/20 dark:hover:bg-white/10 transition-colors whitespace-nowrap"
               style={{ color: 'var(--color-text-main)' }}
             >
@@ -79,6 +103,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </a>
             <a
               href="#projects"
+              onClick={() => soundEngine.playButtonTick()}
               className="px-3.5 py-1.5 rounded-full hover:bg-white/20 dark:hover:bg-white/10 transition-colors whitespace-nowrap"
               style={{ color: 'var(--color-text-main)' }}
             >
@@ -86,6 +111,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </a>
             <a
               href="#story"
+              onClick={() => soundEngine.playButtonTick()}
               className="px-3.5 py-1.5 rounded-full hover:bg-white/20 dark:hover:bg-white/10 transition-colors whitespace-nowrap"
               style={{ color: 'var(--color-text-main)' }}
             >
@@ -93,38 +119,62 @@ export const Navbar: React.FC<NavbarProps> = ({
             </a>
             <a
               href="#dream-delivery-routes"
+              onClick={() => soundEngine.playButtonTick()}
               className="px-3.5 py-1.5 rounded-full hover:bg-white/20 dark:hover:bg-white/10 transition-colors whitespace-nowrap text-sky-400"
             >
               Routes
             </a>
+            <a
+              href="#guestbook"
+              onClick={() => soundEngine.playButtonTick()}
+              className="px-3.5 py-1.5 rounded-full hover:bg-white/20 dark:hover:bg-white/10 transition-colors whitespace-nowrap text-pink-300 font-bold"
+            >
+              Guestbook
+            </a>
           </nav>
 
-          {/* Zone 3: Interactive Controls (Sound, Theme, Secret Star) */}
+          {/* Zone 3: Interactive Controls (Sound, Theme, Secret Star, Chaos Mode) */}
           <div className="flex items-center gap-2 shrink-0">
-            {/* Secret Clickable Star Button (5 clicks trigger Easter Egg) */}
+            {/* Subtle Secret Star Button (Easter Egg Discovery) */}
             <button
               onClick={handleStarClick}
-              className="liquid-glass-pill p-2 text-yellow-400 hover:text-yellow-300 hover:scale-110 active:scale-95 transition-all relative group"
-              title={`Secret Star (${starClickCount}/5 clicks)`}
-              aria-label="Secret star easter egg"
+              className="liquid-glass-pill p-2 text-yellow-400 hover:text-yellow-300 hover:scale-110 active:scale-95 transition-all relative group cursor-pointer"
+              title="Wish upon a star ✨"
+              aria-label="Wish upon a star"
             >
               <Star className="w-4 h-4 fill-yellow-300 drop-shadow-[0_0_6px_rgba(241,198,109,0.7)] animate-pulse" />
-              {starClickCount > 0 && starClickCount < 5 && (
-                <span className="absolute -bottom-1 -right-1 text-[9px] font-mono bg-pink-600 text-white rounded-full w-3.5 h-3.5 flex items-center justify-center">
-                  {starClickCount}
-                </span>
-              )}
             </button>
+
+            {/* Optional Responsive Chaos Mode Toggle */}
+            {onToggleChaosMode && (
+              <button
+                onClick={() => {
+                  soundEngine.playButtonTick();
+                  onToggleChaosMode();
+                }}
+                aria-pressed={chaosMode}
+                className={`liquid-glass-pill px-2.5 sm:px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  chaosMode
+                    ? 'text-pink-200 border-pink-400 bg-pink-500/25 shadow-[0_0_10px_rgba(244,114,182,0.5)]'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title={chaosMode ? 'Disable Chaos Mode' : 'Enable Optional Retro Chaos Mode'}
+                aria-label={chaosMode ? 'Disable Chaos Mode' : 'Enable Optional Retro Chaos Mode'}
+              >
+                <Zap className={`w-3.5 h-3.5 ${chaosMode ? 'fill-amber-300 text-amber-300 animate-bounce' : 'text-slate-400'}`} />
+                <span className="hidden sm:inline">{chaosMode ? 'Chaos: ON' : 'Chaos'}</span>
+              </button>
+            )}
 
             {/* Global Sound Toggle */}
             <button
               onClick={onToggleSound}
               aria-pressed={!soundMuted}
-              className={`liquid-glass-pill px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-all ${
+              className={`liquid-glass-pill px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
                 !soundMuted ? 'text-amber-400' : 'text-slate-400'
               }`}
               title={!soundMuted ? 'Mute Sounds' : 'Unmute Bedtime Sounds'}
-              aria-label={!soundMuted ? 'Mute Sounds' : 'Unmute Bedtime Sounds'}
+              aria-label={!soundMuted ? 'Mute Bedtime Sounds' : 'Unmute Bedtime Sounds'}
             >
               {!soundMuted ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
               <span className="hidden sm:inline">{!soundMuted ? 'Sound On' : 'Muted'}</span>
@@ -133,8 +183,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Day / Night Theme Switch */}
             <button
               onClick={onToggleTheme}
+              aria-pressed={theme === 'day'}
               className="liquid-glass-pill px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
               style={{ color: 'var(--color-text-heading)' }}
+              title={theme === 'night' ? 'Switch to Warm Cream Day Mode' : 'Switch to Plum Night Mode'}
               aria-label={theme === 'night' ? 'Switch to Warm Cream Day Mode' : 'Switch to Plum Night Mode'}
             >
               {theme === 'night' ? (
@@ -153,50 +205,26 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </header>
 
-      {/* Secret Star Floating Glass Note Modal */}
-      {showSecretModal && (
+      {/* Secret Star Floating Glass Toast Notification (Non-Intrusive Easter Egg Discovery) */}
+      {showSecretToast && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
-          role="dialog"
-          aria-modal="true"
+          role="status"
+          aria-live="polite"
+          className="fixed top-20 left-1/2 -translate-x-1/2 z-50 liquid-glass rounded-2xl px-5 py-3.5 shadow-2xl border border-pink-400/40 animate-fade-in flex items-center gap-3 max-w-sm sm:max-w-md w-[92%] text-left"
         >
-          <div className="liquid-glass rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative border-2 border-pink-400/50 animate-pip-bounce">
-            <div className="flex items-center justify-between pb-3 border-b border-pink-500/20 mb-4">
-              <div className="flex items-center gap-2 text-sm font-bold text-yellow-300">
-                <Sparkles className="w-4 h-4" />
-                <span>Pip's Secret Star Note</span>
-              </div>
-              <button
-                onClick={() => setShowSecretModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg text-sm"
-                aria-label="Close message"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="text-center py-4 space-y-3">
-              <div className="text-4xl">🌟</div>
-              <blockquote className="text-lg font-serif italic text-white leading-relaxed">
-                "You found my secret star! Thanks for being here."
-              </blockquote>
-              <cite className="block text-sm font-semibold text-pink-300 not-italic">
-                — Pip, Junior Dream Engineer
-              </cite>
-              <p className="text-xs text-slate-300 pt-2">
-                You've unlocked the Midnight Confetti Blessing. Sleep tight tonight!
-              </p>
-            </div>
-
-            <div className="pt-4 flex justify-center">
-              <button
-                onClick={() => setShowSecretModal(false)}
-                className="liquid-glass-button px-6 py-2 rounded-full text-xs font-bold text-white bg-pink-600/60 hover:bg-pink-600 border border-pink-400"
-              >
-                Keep Dreaming ✨
-              </button>
-            </div>
+          <div className="w-8 h-8 rounded-full bg-pink-500/20 text-yellow-300 flex items-center justify-center shrink-0">
+            <Sparkles className="w-4 h-4 text-yellow-300 animate-spin-slow" />
           </div>
+          <p className="text-xs sm:text-sm font-medium text-pink-100 flex-1 leading-snug">
+            You found a little extra magic! Pip wishes you the sweetest dreams. ✨
+          </p>
+          <button
+            onClick={() => setShowSecretToast(false)}
+            className="text-pink-300 hover:text-white p-1 rounded-lg text-xs font-semibold cursor-pointer shrink-0"
+            aria-label="Dismiss secret note"
+          >
+            ✕
+          </button>
         </div>
       )}
     </>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { PipState } from '../../types/character';
 import { PIP_STATE_CONFIGS } from './characterStateMap';
 import { PipCharacter } from './PipCharacter';
@@ -6,6 +6,7 @@ import { Sparkles, Sliders, Volume2, VolumeX, Eye } from 'lucide-react';
 import { ScrollReveal } from '../effects/ScrollReveal';
 import { HeadingReveal } from '../effects/HeadingReveal';
 import { TextAnimation } from '../text';
+import { soundEngine } from '../../utils/soundEffects';
 
 interface CharacterPlaygroundProps {
   currentState: PipState;
@@ -42,6 +43,21 @@ export const CharacterPlayground: React.FC<CharacterPlaygroundProps> = ({
   theme,
 }) => {
   const activeConfig = PIP_STATE_CONFIGS[currentState];
+  const [bouncingState, setBouncingState] = useState<PipState | null>(null);
+
+  const handleStateSelect = (stateKey: PipState) => {
+    // 1. Spring-like bounce animation state on the targeted button
+    setBouncingState(stateKey);
+    setTimeout(() => {
+      setBouncingState(null);
+    }, 320);
+
+    // 2. Play distinct, soft state-selection sound (controlled by global mute, only on user gesture)
+    soundEngine.playStateSelection(stateKey);
+
+    // 3. Immediately switch Pip's character state
+    onSelectState(stateKey);
+  };
 
   return (
     <div className="liquid-glass rounded-3xl p-6 sm:p-8 shadow-2xl border border-pink-400/25">
@@ -136,30 +152,62 @@ export const CharacterPlayground: React.FC<CharacterPlaygroundProps> = ({
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5" data-cursor-exclude="true">
             {ALL_STATES.map((stateKey) => {
               const item = PIP_STATE_CONFIGS[stateKey];
               const isSelected = currentState === stateKey;
+              const isBouncing = bouncingState === stateKey;
+
               return (
                 <button
                   key={stateKey}
-                  onClick={() => onSelectState(stateKey)}
-                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                  type="button"
+                  onClick={() => handleStateSelect(stateKey)}
+                  aria-pressed={isSelected}
+                  aria-label={`${item.label} character state: ${item.description}`}
+                  className={`relative p-3 rounded-2xl border text-left cursor-pointer select-none transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 active:scale-95 ${
+                    isBouncing ? 'animate-button-bounce' : ''
+                  } ${
                     isSelected
-                      ? 'liquid-glass border-pink-400 ring-2 ring-pink-400/40 text-white shadow-md'
-                      : 'liquid-glass-pill text-slate-300 hover:text-white'
+                      ? 'liquid-glass border-pink-400 border-2 bg-gradient-to-br from-pink-500/25 via-purple-500/20 to-pink-500/15 ring-2 ring-pink-400/50 shadow-[0_0_22px_rgba(244,114,182,0.38),inset_0_1px_2px_rgba(255,255,255,0.45)] scale-[1.03] -translate-y-0.5 z-10'
+                      : 'liquid-glass-pill border-slate-700/35 text-slate-300 hover:text-white hover:border-pink-400/35 hover:bg-slate-800/30 scale-100 opacity-90 hover:opacity-100'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold capitalize font-serif" style={{ color: isSelected ? 'var(--color-text-heading)' : undefined }}>
+                    <span
+                      className={`text-xs font-bold capitalize font-serif transition-colors ${
+                        isSelected ? 'text-pink-100' : 'text-slate-200'
+                      }`}
+                    >
                       {stateKey}
                     </span>
-                    <span
-                      className="w-2.5 h-2.5 rounded-full"
-                      style={{ backgroundColor: item.accentColor }}
-                    />
+                    <div className="flex items-center gap-1.5">
+                      {isSelected && (
+                        <span className="text-[9px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-full bg-pink-500/40 text-pink-200 border border-pink-400/60 leading-none">
+                          Active
+                        </span>
+                      )}
+                      <span className="relative flex h-2.5 w-2.5 items-center justify-center">
+                        {isSelected && (
+                          <span
+                            className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                            style={{ backgroundColor: item.accentColor }}
+                          />
+                        )}
+                        <span
+                          className={`relative inline-flex rounded-full h-2.5 w-2.5 transition-transform ${
+                            isSelected ? 'scale-110 shadow-[0_0_8px_rgba(244,114,182,0.8)]' : 'opacity-80'
+                          }`}
+                          style={{ backgroundColor: item.accentColor }}
+                        />
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-[11px] truncate" style={{ color: 'var(--color-text-muted)' }}>
+                  <div
+                    className={`text-[11px] truncate transition-colors ${
+                      isSelected ? 'text-pink-200/90 font-medium' : 'text-slate-400'
+                    }`}
+                  >
                     {item.label}
                   </div>
                 </button>

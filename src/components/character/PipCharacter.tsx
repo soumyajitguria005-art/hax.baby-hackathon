@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { PipCharacterProps, PipState } from '../../types/character';
+import { PipCharacterProps } from '../../types/character';
 import { PIP_STATE_CONFIGS } from './characterStateMap';
 import { PipArtwork } from './PipArtwork';
 import { soundEngine } from '../../utils/soundEffects';
@@ -23,10 +23,21 @@ export const PipCharacter: React.FC<PipCharacterProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [tiltAngle, setTiltAngle] = useState<number>(0);
   const [isBouncing, setIsBouncing] = useState<boolean>(false);
+  const [isHovered, setIsHovered] = useState<boolean>(false);
   const [isTouchDevice, setIsTouchDevice] = useState<boolean>(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState<boolean>(false);
+  const bounceTimeoutRef = useRef<number | null>(null);
 
   const config = useMemo(() => PIP_STATE_CONFIGS[state] || PIP_STATE_CONFIGS.idle, [state]);
+
+  // Clean up timers on unmount
+  useEffect(() => {
+    return () => {
+      if (bounceTimeoutRef.current) {
+        clearTimeout(bounceTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Determine size in pixels or CSS classes
   const sizeClasses = useMemo(() => {
@@ -72,7 +83,6 @@ export const PipCharacter: React.FC<PipCharacterProps> = ({
       motionQuery.addEventListener('change', handleMotionChange);
       return () => motionQuery.removeEventListener('change', handleMotionChange);
     } catch {
-      // Fallback for older browsers
       motionQuery.addListener(handleMotionChange);
       return () => motionQuery.removeListener(handleMotionChange);
     }
@@ -127,21 +137,28 @@ export const PipCharacter: React.FC<PipCharacterProps> = ({
     };
   }, [enableTilt, isTouchDevice, prefersReducedMotion]);
 
-  // Handle click on character (bounce animation + soft pop / sound)
-  const handleClick = () => {
+  // Handle click / tap on character (bounce animation + soft pop / sound)
+  const handleClick = (e?: React.MouseEvent | React.TouchEvent | React.KeyboardEvent) => {
     if (!interactive) return;
+    if (e) {
+      e.stopPropagation();
+    }
 
     soundEngine.playGentlePop();
     setIsBouncing(true);
-    setTimeout(() => setIsBouncing(false), 600);
+
+    if (bounceTimeoutRef.current) {
+      clearTimeout(bounceTimeoutRef.current);
+    }
+    bounceTimeoutRef.current = window.setTimeout(() => setIsBouncing(false), 600);
 
     if (onClick) {
       onClick();
     } else if (onStateChange) {
-      // Cycle playful reaction
-      if (state === 'idle') onStateChange('excited');
-      else if (state === 'excited') onStateChange('happy');
+      // Cycle friendly reaction
+      if (state === 'idle') onStateChange('happy');
       else if (state === 'happy') onStateChange('curious');
+      else if (state === 'curious') onStateChange('excited');
       else onStateChange('idle');
     }
   };
@@ -159,15 +176,43 @@ export const PipCharacter: React.FC<PipCharacterProps> = ({
     return 'animate-pip-float';
   }, [isBouncing, state, prefersReducedMotion]);
 
-  const activeSpeech = speechText || config.speech;
+  const shouldDisplaySpeech = showSpeechBubble || (isHovered && interactive && state === 'idle');
+  const activeSpeech = speechText || (isHovered && state === 'idle' ? '✨ Hello! Ready to dream?' : config.speech);
+
+  const [imageErrorTier, setImageErrorTier] = useState<0 | 1 | 2>(0);
+  const expressionAssetPath = `/assets/pip/expressions/${state}.png`;
+
+  // Reset image error tier when state changes to attempt loading the corresponding asset immediately
+  useEffect(() => {
+    setImageErrorTier(0);
+  }, [state]);
 
   return (
     <div
       ref={containerRef}
       className={`relative inline-flex flex-col items-center justify-center select-none ${sizeClasses} ${className}`}
       style={customStyle}
-      role={role}
-      aria-label={ariaLabel || `Pip character, current state: ${config.label}`}
+      role={interactive ? 'button' : role}
+      tabIndex={interactive ? 0 : -1}
+      onMouseEnter={() => {
+        if (interactive) setIsHovered(true);
+      }}
+      onMouseLeave={() => {
+        if (interactive) setIsHovered(false);
+      }}
+      onClick={handleClick}
+      onKeyDown={(e) => {
+        if (interactive && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          handleClick(e);
+        }
+      }}
+      aria-label={
+        ariaLabel ||
+        `Pip the Junior Dream Engineer, current state: ${config.label}.${
+          interactive ? ' Press Enter or click to interact.' : ''
+        }`
+      }
     >
       {/* AMBIENT GLOW BACKDROP */}
       {ambientGlow && (
@@ -175,15 +220,15 @@ export const PipCharacter: React.FC<PipCharacterProps> = ({
           className="absolute inset-0 rounded-full blur-2xl pointer-events-none transition-opacity duration-700"
           style={{
             backgroundColor: config.accentColor,
-            opacity: theme === 'night' ? 0.22 : 0.12,
-            transform: 'scale(1.15)',
+            opacity: theme === 'night' ? (isHovered ? 0.32 : 0.22) : (isHovered ? 0.2 : 0.12),
+            transform: isHovered ? 'scale(1.22)' : 'scale(1.15)',
           }}
           aria-hidden="true"
         />
       )}
 
       {/* SPEECH BUBBLE */}
-      {showSpeechBubble && (
+      {shouldDisplaySpeech && (
         <div
           className="absolute -top-12 z-20 px-3.5 py-1.5 rounded-full text-xs font-medium text-slate-800 bg-white/95 dark:bg-slate-900/95 dark:text-slate-100 shadow-lg border border-pink-200 dark:border-pink-500/30 whitespace-nowrap backdrop-blur-sm pointer-events-none transition-all duration-300 transform -translate-y-1 animate-fade-in"
           role="status"
@@ -196,7 +241,7 @@ export const PipCharacter: React.FC<PipCharacterProps> = ({
       {/* FLOATING PARTICLES */}
       {showParticles && !prefersReducedMotion && (
         <div className="absolute inset-0 pointer-events-none overflow-visible">
-          {/* Musical Notes when Happy or with Music Box */}
+          {/* Musical Notes when Happy */}
           {(config.hasParticles === 'notes' || state === 'happy') && (
             <>
               <span className="absolute top-2 right-4 text-pink-400 text-lg font-bold animate-float-note">
@@ -212,28 +257,29 @@ export const PipCharacter: React.FC<PipCharacterProps> = ({
           )}
 
           {/* Sleepy zZz */}
+          {/* Sleepy zZz - Snug and cozy within Pip's visual avatar area */}
           {(config.hasParticles === 'zzz' || state === 'sleepy' || state === 'sleeping') && (
-            <>
-              <span className="absolute -top-3 right-8 text-blue-400 text-xs font-bold font-mono animate-float-zzz">
+            <div className="absolute top-1 right-2 pointer-events-none select-none z-10" aria-hidden="true">
+              <span className="absolute -top-1 right-3 text-sky-400 text-[10px] font-bold font-mono animate-float-zzz">
                 z
               </span>
               <span
-                className="absolute -top-6 right-5 text-indigo-400 text-sm font-bold font-mono animate-float-zzz"
-                style={{ animationDelay: '1s' }}
+                className="absolute -top-3 right-1.5 text-purple-300 text-xs font-bold font-mono animate-float-zzz"
+                style={{ animationDelay: '0.9s' }}
               >
                 Z
               </span>
               <span
-                className="absolute -top-10 right-2 text-pink-400 text-base font-bold font-mono animate-float-zzz"
-                style={{ animationDelay: '2s' }}
+                className="absolute -top-5 right-0 text-pink-300 text-sm font-bold font-mono animate-float-zzz"
+                style={{ animationDelay: '1.8s' }}
               >
                 Z
               </span>
-            </>
+            </div>
           )}
 
           {/* Sparkles / Twinkling Stars */}
-          {(config.hasParticles === 'stars' || state === 'surprised' || state === 'excited') && (
+          {(config.hasParticles === 'stars' || state === 'surprised' || state === 'excited' || isHovered) && (
             <>
               <span className="absolute top-4 left-6 text-yellow-300 text-xs animate-twinkle">
                 ✦
@@ -251,27 +297,36 @@ export const PipCharacter: React.FC<PipCharacterProps> = ({
 
       {/* CHARACTER ARTWORK WRAPPER WITH GENTLE TILT & BOUNCE */}
       <div
-        onClick={handleClick}
-        className={`w-full h-full cursor-pointer transition-transform duration-300 ease-out ${animationClass}`}
+        className={`w-full h-full transition-transform duration-300 ease-out ${animationClass} ${
+          interactive ? 'cursor-pointer' : ''
+        }`}
         style={{
-          transform: `rotate(${tiltAngle}deg)`,
+          transform: `rotate(${tiltAngle}deg) ${isHovered ? 'scale(1.03)' : 'scale(1)'}`,
           transformOrigin: 'bottom center',
         }}
-        tabIndex={interactive ? 0 : -1}
-        onKeyDown={(e) => {
-          if (interactive && (e.key === 'Enter' || e.key === ' ')) {
-            e.preventDefault();
-            handleClick();
-          }
-        }}
-        aria-label={`${config.label} - Click to interact`}
       >
-        <PipArtwork
-          posture={posture}
-          emotion={emotion}
-          theme={theme}
-          lanternGlow={state === 'holding-lantern' || state === 'excited'}
-        />
+        {imageErrorTier === 0 ? (
+          <img
+            src={expressionAssetPath}
+            alt={`Pip in ${config.label} mood`}
+            className="w-full h-full object-contain pointer-events-none drop-shadow-md select-none transition-all duration-300"
+            onError={() => setImageErrorTier(1)}
+          />
+        ) : imageErrorTier === 1 ? (
+          <img
+            src="/assets/pip-avatar-cloud.png"
+            alt={`Pip in ${config.label} mood`}
+            className="w-full h-full object-contain pointer-events-none drop-shadow-md select-none transition-all duration-300"
+            onError={() => setImageErrorTier(2)}
+          />
+        ) : (
+          <PipArtwork
+            posture={posture}
+            emotion={emotion}
+            theme={theme}
+            lanternGlow={state === 'holding-lantern' || state === 'excited'}
+          />
+        )}
       </div>
     </div>
   );
