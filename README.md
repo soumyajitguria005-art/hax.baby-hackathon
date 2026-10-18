@@ -3,7 +3,7 @@
 An interactive character engine and cozy bedtime operating system built for the **hax.baby hackathon** by **Team Expo**.
 
 - **Repository**: [soumyajitguria005-art/hax.baby-hackathon](https://github.com/soumyajitguria005-art/hax.baby-hackathon)
-- **Live Deployed App**: [npx plugins add vercel/vercel-plugin](npx plugins add vercel/vercel-plugin)
+- **Live Deployed App**:[ [npx plugins add vercel/vercel-plugin](npx plugins add vercel/vercel-plugin)](https://hax-baby-hackathon.vercel.app/)
 
 ---
 
